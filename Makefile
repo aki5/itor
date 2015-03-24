@@ -10,5 +10,5 @@ itor: main.o $(LIBDRAW3)
 	$(CC) $(CFLAGS) -o $@ main.o $(LIBDRAW3) $(LIBDRAW3_LIBS)
 
 clean:
-	rm -rf *.o itor
+	rm -rf *.o itor perf.*
 

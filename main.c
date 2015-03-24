@@ -99,11 +99,11 @@ main(int argc, char *argv[])
 	initdrawstr("/usr/share/fonts/truetype/droid/DroidSans.ttf"); //-Bold
 	//initdrawstr("/usr/share/fonts/truetype/freefont/FreeMono.ttf"); 
 	//initdrawstr("/usr/share/fonts/truetype/freefont/FreeSans.ttf"); 
-	setfontsize(16);
+	setfontsize(9);
 
 	fgcolor = allocimage(rect(0,0,1,1), color(150, 200, 80, 255));
 //	bgcolor = allocimage(rect(0,0,1,1), color(255,255,255,255));
-	bgcolor = allocimage(rect(0,0,1,1), color(50,60,50,255));
+	bgcolor = allocimage(rect(0,0,1,1), color(40,50,40,255));
 
 	selcolor = allocimage(rect(0,0,1,1), color(90,100,80,255));
 
@@ -191,7 +191,7 @@ main(int argc, char *argv[])
 			}
 
 			if(select == 0 && mousebegin(inp) == Mouse1){
-				printf("select begin %d,%d!\n", inp->xy[0], inp->xy[1]);
+				//printf("select begin %d,%d!\n", inp->xy[0], inp->xy[1]);
 				sel0[0] = inp->xy[0]-uoff;
 				sel0[1] = inp->xy[1]-voff;
 				sel1[0] = inp->xy[0]-uoff;
@@ -207,7 +207,7 @@ main(int argc, char *argv[])
 			if(select && mouseend(inp) == Mouse1){
 				sel1[0] = inp->xy[0]-uoff;
 				sel1[1] = inp->xy[1]-voff;
-				printf("select end: %d,%d,%d,%d!\n", sel0[0], sel0[1], sel1[0], sel1[1]);
+				//printf("select end: %d,%d,%d,%d!\n", sel0[0], sel0[1], sel1[0], sel1[1]);
 				select = 0;
 				nmark = 0;
 			}
@@ -260,7 +260,7 @@ main(int argc, char *argv[])
 			drawtext(textr, sel0fix, sel1fix);
 
 			/* blend background in */
-			drawblend_back(&screen, screen.r, bgcolor);
+			//drawblend_back(&screen, screen.r, bgcolor);
 		}
 	}
 

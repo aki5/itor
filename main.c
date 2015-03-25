@@ -1,3 +1,10 @@
+/*
+ *	It is quite interesting that if we enable animating on libdraw3,
+ *	there's noticeably more sluggishness on selecting and typing.
+ *
+ *	I'd like to blame X11 for that, but as long as X11 is the only
+ *	back-end we have, there's really nothing to compare it with.
+ */
 #include "os.h"
 #include "draw3.h"
 
@@ -21,17 +28,25 @@ int nmark;
 /*
  *	drawtext draws the main text panel view. it also computes
  *	mark[0] and mark[1] from mouse selection in case they weren't
- *	already set.
+ *	already set. It is important that the routine covers all of 
+ *	dstr, otherwise it may miss hit-testing on the mouse select.
  */
 void
-drawtext(Rect dstr, short *sel0, short *sel1)
+drawtext(Rect dstr, short *sel0x, short *sel1x)
 {
-	int insel, dx;
 	Rect r, lr;
-	int code, off;
 	char *sp;
+	short sel0[2], sel1[2];
+	int insel, dx;
+	int code, off;
+
+	sel0[0] = sel0x[0] < dstr.u0 ? dstr.u0+uoff : (sel0x[0] + uoff);
+	sel0[1] = sel0x[1] < dstr.v0 ? dstr.v0+voff : (sel0x[1] + voff);
+	sel1[0] = sel1x[0] < dstr.u0 ? dstr.u0+uoff : (sel1x[0] + uoff);
+	sel1[1] = sel1x[1] < dstr.v0 ? dstr.v0+voff : (sel1x[1] + voff);
 
 	insel = 0;
+	uoff = 0; /* this is ugly */
 	r.u0 = dstr.u0 + uoff;
 	r.v0 = dstr.v0 + voff;
 	r.uend = dstr.uend;
@@ -62,14 +77,19 @@ drawtext(Rect dstr, short *sel0, short *sel1)
 			mark[nmark++] = sp-text;
 
 		if(nmark > 0 && mark[0] == sp-text){
-			blend_add_under(&screen, rect(lr.u0-1, lr.v0, lr.u0+1, lr.vend), fgcolor);
+			blend2(
+				&screen,
+				rect(lr.u0-1, lr.v0, lr.u0+1, lr.vend),
+				fgcolor,
+				BlendUnder
+			);
 			insel = 1;
 		}
 		if(nmark > 1 && mark[1] == sp-text)
 			insel = 0;
 
 		if(insel)
-			blend_add_under(&screen, lr, selcolor);
+			blend2(&screen, lr, selcolor, BlendUnder);
 
 		if(code == '\n'){
 			r.u0 = dstr.u0 + uoff;
@@ -80,12 +100,15 @@ drawtext(Rect dstr, short *sel0, short *sel1)
 			r.u0 += rectw(&lr);
 		}
 	}
-	if(nmark < 2)
-		mark[nmark++] = sp-text;
-	if(nmark < 2)
+	while(nmark < 2)
 		mark[nmark++] = sp-text;
 	if(mark[0] == sp-text)
-		blend_add_under(&screen, rect(r.u0-1, r.v0, r.u0+1, r.vend), fgcolor);
+		blend2(
+			&screen,
+			rect(r.u0-1, r.v0, r.u0+1, r.vend),
+			fgcolor,
+			BlendUnder
+		);
 }
 
 /*
@@ -189,28 +212,55 @@ int
 main(int argc, char *argv[])
 {
 	Input *inp, *einp;
-	int fontsize = 12;
+	char *fontname;
+	int fontsize;
+	int opt, fgci;
 
-	drawinit(800,800);
-	initdrawstr("/usr/share/fonts/truetype/droid/DroidSans.ttf"); //-Bold
-	//initdrawstr("/usr/share/fonts/truetype/freefont/FreeMono.ttf"); 
-	//initdrawstr("/usr/share/fonts/truetype/freefont/FreeSans.ttf"); 
-	//setfontsize(12);
+	//fontname = "/usr/share/fonts/truetype/droid/DroidSans.ttf";
+	fontname = "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf";
+	fontsize = 9;
+	fgci = 2;
+	while((opt = getopt(argc, argv, "f:s:c:")) != -1){
+		switch(opt){
+		case 'c':
+			fgci = atoi(optarg);
+			break;
+		case 'f':
+			fontname = optarg;
+			break;
+		case 's':
+			fontsize = atoi(optarg);
+			break;
+		default:
+			fprintf(stderr, "usage: %s [-f fontfile] [-s fontsize] [-c coloridx] file1\n", argv[0]);
+			exit(1);
+		}
+	}
+
+	drawinit(640,800);
+	initdrawstr(fontname); 
 	setfontsize(fontsize);
 
-//	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
-//	bgcolor = allocimage(rect(0,0,1,1), color(255,255,255,255));
-//	fgcolor = allocimage(rect(0,0,1,1), color(170, 170, 170, 255));
-//	fgcolor = allocimage(rect(0,0,1,1), color(255, 255, 255, 255));
-
-//	bgcolor = allocimage(rect(0,0,1,1), color(40,40,40,255));
-	fgcolor = allocimage(rect(0,0,1,1), color(150, 200, 80, 255));
-	selcolor = allocimage(rect(0,0,1,1), color(80,90,70,255));
+#if 0
+	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
+	bgcolor = allocimage(rect(0,0,1,1), color(255, 240, 240, 255));
+	selcolor = allocimage(rect(0,0,1,1), color(80,90,70,127));
+#else
+	uchar cval[4];
+	// this may be my new favorite green: color(150, 200, 80, 255));
+	idx2color(fgci, cval);
+	fgcolor = allocimage(rect(0,0,1,1), cval);
 	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
+	cval[0] /= 2;
+	cval[1] /= 2;
+	cval[2] /= 2;
+	cval[3] /= 2;
+	selcolor = allocimage(rect(0,0,1,1), cval);
+#endif
 
-	if(argc > 0){
+	if(optind < argc){
 		int n;
-		fd = open(argv[1], O_RDWR);
+		fd = open(argv[optind], O_RDWR);
 		ntext = 0;
 		atext = 1024;
 		text = malloc(atext);
@@ -231,6 +281,8 @@ main(int argc, char *argv[])
 
 	short sel0[2] = {0};
 	short sel1[2] = {0};
+
+	//drawanimate(1);
 
 	for(;;){
 		repaint = 0;
@@ -396,24 +448,35 @@ main(int argc, char *argv[])
 
 		}
 		if(1){
+			static double st = 0.0, et = 0.0;
 			/* clear to transparent */
 			drawrect(&screen, screen.r, color(0, 0, 0, 0));
 
 			Rect textr;
-			textr = screen.r;
-			textr.u0 += 10;
-			textr.v0 += 10;
-			textr.uend -= 10;
-			textr.vend -= 10;
-			short sel0fix[2], sel1fix[2];
-			sel0fix[0] = sel0[0] < textr.u0 ? textr.u0+uoff : (sel0[0] + uoff);
-			sel0fix[1] = sel0[1] < textr.v0 ? textr.v0+voff : (sel0[1] + voff);
-			sel1fix[0] = sel1[0] < textr.u0 ? textr.u0+uoff : (sel1[0] + uoff);
-			sel1fix[1] = sel1[1] < textr.v0 ? textr.v0+voff : (sel1[1] + voff);
-			drawtext(textr, sel0fix, sel1fix);
+			textr = insetrect(screen.r, 7);
+			drawtext(textr, sel0, sel1);
+
+			et = timenow();
+			char msg[64];
+			int n;
+			n = snprintf(msg, sizeof msg, "%dx%d %.2f fps", rectw(&screen.r), recth(&screen.r), 1.0 / (et-st));
+			drawstr(
+				&screen,
+				rect(
+					textr.uend-12*fontem(),
+					textr.v0,
+					textr.uend,
+					textr.v0+linespace()
+				),
+				msg,
+				n,
+				fgcolor
+			);
+
+			st = et;
 
 			/*commented out because it's a bit of a dog on the raspberry */
-			//blend_add_under(&screen, screen.r, bgcolor);
+			//blend2(&screen, textr, bgcolor, BlendRadd);
 		}
 	}
 

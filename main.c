@@ -1,19 +1,7 @@
 #include "os.h"
 #include "draw3.h"
 
-typedef struct Line Line;
-struct Line {
-	Line *next;
-	Line *prev;
-	char *sp, *ep;
-	int sel;
-	Rect r;
-};
-
 int uoff, voff;
-
-Line *line0;
-Line *lineend;
 
 char *clip;
 int nclip, aclip;
@@ -30,25 +18,20 @@ Image *bgcolor;
 int mark[2];
 int nmark;
 
+/*
+ *	drawtext draws the main text panel view. it also computes
+ *	mark[0] and mark[1] from mouse selection in case they weren't
+ *	already set
+ */
 void
 drawtext(Rect dstr, short *sel0, short *sel1)
 {
 	int insel, dx;
-	Rect r;
-
-	insel = 0;
-
-	Rect lr;
+	Rect r, lr;
 	int code, off;
 	char *sp;
 
-	/* add a phony newline, helps with selection */
-	if(ntext == atext){
-		atext++;
-		text = realloc(text, atext);
-	}
-	//text[ntext++] = '\n';
-
+	insel = 0;
 	r.u0 = dstr.u0 + uoff;
 	r.v0 = dstr.v0 + voff;
 	r.uend = dstr.uend;
@@ -97,16 +80,18 @@ drawtext(Rect dstr, short *sel0, short *sel1)
 			r.u0 += rectw(&lr);
 		}
 	}
-	if(nmark < 2){
+	if(nmark < 2)
 		mark[nmark++] = sp-text;
-	}
-	if(nmark < 2){
+	if(nmark < 2)
 		mark[nmark++] = sp-text;
-	}
 	if(mark[0] == sp-text)
 		drawrect(&screen, rect(r.u0-1, r.v0, r.u0+1, r.vend), color(255,255,255,255));
 }
 
+/*
+ *	the undo mechanism follows; it's just an array of operations
+ *	that were done, with enough data to reverse (or forward) them.
+ */
 enum {
 	OpInsert = 1,
 	OpErase = 2,
@@ -206,7 +191,7 @@ main(int argc, char *argv[])
 //	bgcolor = allocimage(rect(0,0,1,1), color(255,255,255,255));
 //	bgcolor = allocimage(rect(0,0,1,1), color(40,40,40,255));
 	fgcolor = allocimage(rect(0,0,1,1), color(150, 200, 80, 255));
-	selcolor = allocimage(rect(0,0,1,1), color(90,100,80,255));
+	selcolor = allocimage(rect(0,0,1,1), color(80,90,70,255));
 	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
 
 	if(argc > 0){
@@ -222,10 +207,7 @@ main(int argc, char *argv[])
 				text = realloc(text, atext);
 			}
 		}
-		//close(fd);
 	}
-
-	//initlayout();
 
 	int drag = 0;
 	int select = 0;
@@ -236,7 +218,6 @@ main(int argc, char *argv[])
 	short sel0[2] = {0};
 	short sel1[2] = {0};
 
-//drawanimate(1);
 	for(;;){
 		repaint = 0;
 		for(inp = drawevents(&einp); inp < einp; inp++){
@@ -396,7 +377,10 @@ main(int argc, char *argv[])
 			sel1fix[1] = sel1[1] < textr.v0 ? textr.v0+voff : (sel1[1] + voff);
 			drawtext(textr, sel0fix, sel1fix);
 
-			/* put background in */
+			/*
+			 *	blend background in. commented out because it's a bit of a dog on
+			 *	the raspberry
+			 */
 			//blend_add_under(&screen, screen.r, bgcolor);
 		}
 	}

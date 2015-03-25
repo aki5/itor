@@ -21,6 +21,7 @@ int fd;
 Image *selcolor;
 Image *fgcolor;
 Image *bgcolor;
+uchar selcval[4];
 
 int mark[2];
 int nmark;
@@ -32,7 +33,7 @@ int nmark;
  *	dstr, otherwise it may miss hit-testing on the mouse select.
  */
 void
-drawtext(Rect dstr, short *sel0x, short *sel1x)
+drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 {
 	Rect r, lr;
 	char *sp;
@@ -68,7 +69,7 @@ drawtext(Rect dstr, short *sel0x, short *sel1x)
 			lr = rect(r.u0, r.v0, r.u0+dx, r.v0+linespace());
 			break;
 		default:
-			lr = drawchar(&screen, r, code, fgcolor);
+			lr = drawchar(dst, r, code, fgcolor);
 			break;
 		}
 		if(nmark < 2 && ptinrect(sel0, &lr))
@@ -78,18 +79,35 @@ drawtext(Rect dstr, short *sel0x, short *sel1x)
 
 		if(nmark > 0 && mark[0] == sp-text){
 			blend2(
-				&screen,
-				rect(lr.u0-1, lr.v0, lr.u0+1, lr.vend),
-				fgcolor,
+				dst,
+				rect(lr.u0, lr.v0, lr.u0+2, lr.vend),
+				selcolor,
 				BlendUnder
+			);
+			drawcircle(
+				dst, 
+				dstr,
+				pt(r.u0<<4, (r.v0-linespace()/2)<<4),
+				(linespace()/2)<<4,
+				4,
+				selcval
 			);
 			insel = 1;
 		}
-		if(nmark > 1 && mark[1] == sp-text)
+		if(nmark > 1 && mark[1] == sp-text){
 			insel = 0;
+			drawcircle(
+				dst, 
+				dstr,
+				pt(r.u0<<4, (r.vend+linespace()/2-1)<<4),
+				(linespace()/2)<<4,
+				4,
+				selcval
+			);
+		}
 
 		if(insel)
-			blend2(&screen, lr, selcolor, BlendUnder);
+			blend2(dst, cliprect(lr, dstr), selcolor, BlendUnder);
 
 		if(code == '\n'){
 			r.u0 = dstr.u0 + uoff;
@@ -102,13 +120,30 @@ drawtext(Rect dstr, short *sel0x, short *sel1x)
 	}
 	while(nmark < 2)
 		mark[nmark++] = sp-text;
-	if(mark[0] == sp-text)
+	if(mark[0] == sp-text){
 		blend2(
-			&screen,
-			rect(r.u0-1, r.v0, r.u0+1, r.vend),
-			fgcolor,
+			dst,
+			rect(r.u0, r.v0, r.u0+2, r.vend),
+			selcolor,
 			BlendUnder
 		);
+		drawcircle(
+			dst, 
+			dstr,
+			pt(r.u0<<4, (r.v0-linespace()/2)<<4),
+			(linespace()/2)<<4,
+			4,
+			selcval
+		);
+		drawcircle(
+			dst, 
+			dstr,
+			pt(r.u0<<4, (r.vend+linespace()/2-1)<<4),
+			(linespace()/2)<<4,
+			4,
+			selcval
+		);
+	}
 }
 
 /*
@@ -232,30 +267,38 @@ main(int argc, char *argv[])
 			fontsize = atoi(optarg);
 			break;
 		default:
-			fprintf(stderr, "usage: %s [-f fontfile] [-s fontsize] [-c coloridx] file1\n", argv[0]);
+			fprintf(
+				stderr,
+				"usage: %s [-f fontfile] [-s fontsize] [-c coloridx] file1\n",
+				argv[0]
+			);
 			exit(1);
 		}
 	}
 
-	drawinit(640,800);
 	initdrawstr(fontname); 
 	setfontsize(fontsize);
+	drawinit(50*fontem(),800);
 
-#if 0
+#if 1
 	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
 	bgcolor = allocimage(rect(0,0,1,1), color(255, 240, 240, 255));
-	selcolor = allocimage(rect(0,0,1,1), color(80,90,70,127));
+	selcval[0] = 80;
+	selcval[1] = 90;
+	selcval[2] = 70;
+	selcval[3] = 127;
+	selcolor = allocimage(rect(0,0,1,1), selcval);
 #else
 	uchar cval[4];
 	// this may be my new favorite green: color(150, 200, 80, 255));
 	idx2color(fgci, cval);
 	fgcolor = allocimage(rect(0,0,1,1), cval);
 	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
-	cval[0] /= 2;
-	cval[1] /= 2;
-	cval[2] /= 2;
-	cval[3] /= 2;
-	selcolor = allocimage(rect(0,0,1,1), cval);
+	selcval[0] = cval[0]/2;
+	selcval[1] = cval[1]/2;
+	selcval[2] = cval[2]/2;
+	selcval[3] = cval[3]/2;
+	selcolor = allocimage(rect(0,0,1,1), selcval);
 #endif
 
 	if(optind < argc){
@@ -454,7 +497,7 @@ main(int argc, char *argv[])
 
 			Rect textr;
 			textr = insetrect(screen.r, 7);
-			drawtext(textr, sel0, sel1);
+			drawtext(&screen, textr, sel0, sel1);
 
 			et = timenow();
 			char msg[64];
@@ -476,7 +519,7 @@ main(int argc, char *argv[])
 			st = et;
 
 			/*commented out because it's a bit of a dog on the raspberry */
-			//blend2(&screen, textr, bgcolor, BlendRadd);
+			blend2(&screen, textr, bgcolor, BlendUnder);
 		}
 	}
 

@@ -1,6 +1,3 @@
-/*
- *	Itor is a "what you get is what you get" editor
- */
 #include "os.h"
 #include "draw3.h"
 
@@ -23,6 +20,8 @@ int nclip, aclip;
 
 char *text;
 int ntext, atext;
+
+int fd;
 
 Image *selcolor;
 Image *fgcolor;
@@ -172,15 +171,33 @@ undo(void)
 }
 
 int
+save(void)
+{
+	int off, n;
+
+	lseek(fd, 0, SEEK_SET);
+	ftruncate(fd, 0);
+	off = 0;
+	while(off < ntext){
+		if((n = write(fd, text+off, ntext-off)) == -1)
+			return -1;
+		off += n;
+	}
+	return 0;
+}
+
+int
 main(int argc, char *argv[])
 {
 	Input *inp, *einp;
+	int fontsize = 12;
 
 	drawinit(800,800);
 	initdrawstr("/usr/share/fonts/truetype/droid/DroidSans.ttf"); //-Bold
 	//initdrawstr("/usr/share/fonts/truetype/freefont/FreeMono.ttf"); 
 	//initdrawstr("/usr/share/fonts/truetype/freefont/FreeSans.ttf"); 
-	setfontsize(12);
+	//setfontsize(12);
+	setfontsize(fontsize);
 
 //	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
 //	fgcolor = allocimage(rect(0,0,1,1), color(170, 170, 170, 255));
@@ -193,9 +210,8 @@ main(int argc, char *argv[])
 	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
 
 	if(argc > 0){
-		int fd;
 		int n;
-		fd = open(argv[1], O_RDONLY);
+		fd = open(argv[1], O_RDWR);
 		ntext = 0;
 		atext = 1024;
 		text = malloc(atext);
@@ -206,7 +222,7 @@ main(int argc, char *argv[])
 				text = realloc(text, atext);
 			}
 		}
-		close(fd);
+		//close(fd);
 	}
 
 	//initlayout();
@@ -226,8 +242,29 @@ main(int argc, char *argv[])
 		for(inp = drawevents(&einp); inp < einp; inp++){
 			if(nmark == 2 && mark[0] > mark[1])
 				abort();
+			if(keystr(inp, "s") && (inp->on & KeyControl) != 0){
+				save();
+			}
 			if(keystr(inp, "z") && (inp->on & KeyControl) != 0){
 				undo();
+			}
+			if((keystr(inp, "=") || keystr(inp, "+")) && (inp->on & KeyControl) != 0){
+				fontsize++;
+				setfontsize(fontsize);
+			}
+			if(keystr(inp, "-") && (inp->on & KeyControl) != 0){
+				if(fontsize > 3){
+					fontsize--;
+					setfontsize(fontsize);
+				}
+			}
+			if(keystr(inp, "c") && (inp->on & KeyControl) != 0){
+				if(aclip < mark[1]-mark[0]){
+					aclip = mark[1]-mark[0];
+					clip = realloc(clip, aclip);
+				}
+				memcpy(clip, text+mark[0], mark[1]-mark[0]);
+				nclip = mark[1]-mark[0];
 			}
 			if(keystr(inp, "x") && (inp->on & KeyControl) != 0){
 				if(mark[0] < mark[1]){
@@ -250,7 +287,7 @@ main(int argc, char *argv[])
 			if(keystr(inp, "v") && (inp->on & KeyControl) != 0){
 				insert(mark[0], clip, nclip, 0);
 			}
-			if((keystr(inp, "q") || keystr(inp, "c")) && (inp->on & KeyControl) != 0)
+			if((keystr(inp, "q")) && (inp->on & KeyControl) != 0)
 				exit(0);
 
 			if(mark[0] == mark[1]){
@@ -360,7 +397,7 @@ main(int argc, char *argv[])
 			drawtext(textr, sel0fix, sel1fix);
 
 			/* put background in */
-			blend_add_under(&screen, screen.r, bgcolor);
+			//blend_add_under(&screen, screen.r, bgcolor);
 		}
 	}
 

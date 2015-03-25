@@ -4,6 +4,12 @@
  *
  *	I'd like to blame X11 for that, but as long as X11 is the only
  *	back-end we have, there's really nothing to compare it with.
+ *
+ *	It seems very important that input events are timely. High frame rate
+ *	is not very useful if your input isn't seen by your program until many
+ *	frames later. I'd rather take 20fps and instant reaction, but that's
+ *	not the kind of tradeoff this is. Just making a note that latency is
+ *	probably more important than throughput in this area too.
  */
 #include "os.h"
 #include "draw3.h"
@@ -78,12 +84,6 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 			mark[nmark++] = sp-text;
 
 		if(nmark > 0 && mark[0] == sp-text){
-			blend2(
-				dst,
-				rect(lr.u0, lr.v0, lr.u0+2, lr.vend),
-				selcolor,
-				BlendUnder
-			);
 			drawcircle(
 				dst, 
 				dstr,
@@ -96,6 +96,12 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 		}
 		if(nmark > 1 && mark[1] == sp-text){
 			insel = 0;
+			blend2(
+				dst,
+				rect(r.u0, r.v0, r.u0+2, r.vend),
+				selcolor,
+				BlendUnder
+			);
 			drawcircle(
 				dst, 
 				dstr,
@@ -278,9 +284,9 @@ main(int argc, char *argv[])
 
 	initdrawstr(fontname); 
 	setfontsize(fontsize);
-	drawinit(50*fontem(),800);
+	drawinit(60*fontem(),800);
 
-#if 1
+#if 0
 	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
 	bgcolor = allocimage(rect(0,0,1,1), color(255, 240, 240, 255));
 	selcval[0] = 80;
@@ -291,7 +297,8 @@ main(int argc, char *argv[])
 #else
 	uchar cval[4];
 	// this may be my new favorite green: color(150, 200, 80, 255));
-	idx2color(fgci, cval);
+	cval[0] = 80; cval[1] = 200; cval[2] = 150; cval[3] = 255;
+	//idx2color(fgci, cval);
 	fgcolor = allocimage(rect(0,0,1,1), cval);
 	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
 	selcval[0] = cval[0]/2;
@@ -519,7 +526,7 @@ main(int argc, char *argv[])
 			st = et;
 
 			/*commented out because it's a bit of a dog on the raspberry */
-			blend2(&screen, textr, bgcolor, BlendUnder);
+			//blend2(&screen, textr, bgcolor, BlendUnder);
 		}
 	}
 

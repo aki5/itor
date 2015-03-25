@@ -21,7 +21,7 @@ int nmark;
 /*
  *	drawtext draws the main text panel view. it also computes
  *	mark[0] and mark[1] from mouse selection in case they weren't
- *	already set
+ *	already set.
  */
 void
 drawtext(Rect dstr, short *sel0, short *sel1)
@@ -49,7 +49,7 @@ drawtext(Rect dstr, short *sel0, short *sel1)
 			lr.uend = 32767;
 			break;
 		case '\t':
-			dx = 3*fontem();
+			dx = 3*fontem() - (r.u0-(dstr.u0+uoff)) % (3*fontem());
 			lr = rect(r.u0, r.v0, r.u0+dx, r.v0+linespace());
 			break;
 		default:
@@ -62,7 +62,7 @@ drawtext(Rect dstr, short *sel0, short *sel1)
 			mark[nmark++] = sp-text;
 
 		if(nmark > 0 && mark[0] == sp-text){
-			drawrect(&screen, rect(lr.u0-1, lr.v0, lr.u0+1, lr.vend), color(255,255,255,255));
+			blend_add_under(&screen, rect(lr.u0-1, lr.v0, lr.u0+1, lr.vend), fgcolor);
 			insel = 1;
 		}
 		if(nmark > 1 && mark[1] == sp-text)
@@ -85,7 +85,7 @@ drawtext(Rect dstr, short *sel0, short *sel1)
 	if(nmark < 2)
 		mark[nmark++] = sp-text;
 	if(mark[0] == sp-text)
-		drawrect(&screen, rect(r.u0-1, r.v0, r.u0+1, r.vend), color(255,255,255,255));
+		blend_add_under(&screen, rect(r.u0-1, r.v0, r.u0+1, r.vend), fgcolor);
 }
 
 /*
@@ -97,33 +97,38 @@ enum {
 	OpErase = 2,
 };
 
-struct {
-	int op;
+typedef struct Editop Editop;
+struct Editop {
+	int opcode;
 	int mark;
 	char *str;
 	int len;
-} *ops;
+};
+
+Editop *ops;
 int nops, aops;
 
 void
-addop(int op, int mark, char *str, int len)
+addop(int opcode, int mark, char *str, int len)
 {
+	Editop *op;
 	if(nops >= aops){
 		aops = nops + 128;
 		ops = realloc(ops, aops * sizeof ops[0]);
 	}
-	ops[nops].op = op;
-	ops[nops].mark = mark;
-	ops[nops].str = malloc(len);
-	memcpy(ops[nops].str, str, len);
-	ops[nops].len = len;
+	op = ops + nops;
+	op->opcode = opcode;
+	op->mark = mark;
+	op->str = malloc(len);
+	memcpy(op->str, str, len);
+	op->len = len;
 	nops++;
 }
 
 void
-insert(int mark0, char *str, int len, int is_undo)
+insert(int mark0, char *str, int len, int isundo)
 {
-	if(!is_undo)
+	if(isundo == 0)
 		addop(OpInsert, mark0, str, len);
 	if(ntext+len >= atext){
 		atext = ntext+len;
@@ -135,9 +140,9 @@ insert(int mark0, char *str, int len, int is_undo)
 }
 
 void
-erase(int mark0, int mark1, int is_undo)
+erase(int mark0, int mark1, int isundo)
 {
-	if(!is_undo)
+	if(isundo == 0)
 		addop(OpErase, mark0, text+mark0, mark1-mark0);
 	memmove(text+mark0, text+mark1, ntext-mark1);
 	ntext -= mark1-mark0;
@@ -147,10 +152,19 @@ void
 undo(void)
 {
 	if(nops > 0){
-		if(ops[nops-1].op == OpErase)
-			insert(ops[nops-1].mark, ops[nops-1].str, ops[nops-1].len, 1);
-		if(ops[nops-1].op == OpInsert)
-			erase(ops[nops-1].mark, ops[nops-1].mark+ops[nops-1].len, 1);
+		Editop *op;
+		op = ops + nops-1;
+		if(op->opcode == OpErase){
+			insert(op->mark, op->str, op->len, 1);
+			mark[0] = mark[1] = op->mark+op->len;
+		}
+		if(op->opcode == OpInsert){
+			erase(op->mark, op->mark+op->len, 1);
+			mark[0] = mark[1] = op->mark;
+		}
+		/* I guess the following is a bad idea if we ever want redo */
+		free(op->str);
+		memset(ops+nops-1, 0, sizeof ops[0]);
 		nops--;
 	}
 }
@@ -185,10 +199,10 @@ main(int argc, char *argv[])
 	setfontsize(fontsize);
 
 //	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
+//	bgcolor = allocimage(rect(0,0,1,1), color(255,255,255,255));
 //	fgcolor = allocimage(rect(0,0,1,1), color(170, 170, 170, 255));
 //	fgcolor = allocimage(rect(0,0,1,1), color(255, 255, 255, 255));
 
-//	bgcolor = allocimage(rect(0,0,1,1), color(255,255,255,255));
 //	bgcolor = allocimage(rect(0,0,1,1), color(40,40,40,255));
 	fgcolor = allocimage(rect(0,0,1,1), color(150, 200, 80, 255));
 	selcolor = allocimage(rect(0,0,1,1), color(80,90,70,255));
@@ -223,22 +237,25 @@ main(int argc, char *argv[])
 		for(inp = drawevents(&einp); inp < einp; inp++){
 			if(nmark == 2 && mark[0] > mark[1])
 				abort();
-			if(keystr(inp, "s") && (inp->on & KeyControl) != 0){
+
+			if(keystr(inp, "s") && (inp->on & KeyControl) != 0)
 				save();
-			}
-			if(keystr(inp, "z") && (inp->on & KeyControl) != 0){
+
+			if(keystr(inp, "z") && (inp->on & KeyControl) != 0)
 				undo();
-			}
+
 			if((keystr(inp, "=") || keystr(inp, "+")) && (inp->on & KeyControl) != 0){
 				fontsize++;
 				setfontsize(fontsize);
 			}
+
 			if(keystr(inp, "-") && (inp->on & KeyControl) != 0){
-				if(fontsize > 3){
+				if(fontsize > 4){
 					fontsize--;
 					setfontsize(fontsize);
 				}
 			}
+
 			if(keystr(inp, "c") && (inp->on & KeyControl) != 0){
 				if(aclip < mark[1]-mark[0]){
 					aclip = mark[1]-mark[0];
@@ -247,6 +264,7 @@ main(int argc, char *argv[])
 				memcpy(clip, text+mark[0], mark[1]-mark[0]);
 				nclip = mark[1]-mark[0];
 			}
+
 			if(keystr(inp, "x") && (inp->on & KeyControl) != 0){
 				if(mark[0] < mark[1]){
 					if(aclip < mark[1]-mark[0]){
@@ -265,40 +283,52 @@ main(int argc, char *argv[])
 					sel1[1] = 0;
 				}
 			}
-			if(keystr(inp, "v") && (inp->on & KeyControl) != 0){
+
+			if(keystr(inp, "v") && (inp->on & KeyControl) != 0)
 				insert(mark[0], clip, nclip, 0);
-			}
+
 			if((keystr(inp, "q")) && (inp->on & KeyControl) != 0)
 				exit(0);
 
-			if(mark[0] == mark[1]){
-				if((inp->on & KeyControl) == 0){
-					if(inp->begin & KeyStr){
-						int len;
-						len = strlen(inp->str);
-						insert(mark[0], inp->str, len, 0);
-						mark[0] = mark[1] = mark[0]+len;
+			if((inp->on & KeyControl) == 0){
+				if(inp->begin & KeyStr){
+					int len;
+					len = strlen(inp->str);
+					if(mark[0] != mark[1]){
+						erase(mark[0], mark[1], 0);
+						mark[1] = mark[0];
 					}
-					if(inp->begin & KeyBackSpace){
-						if(mark[0] > 0){
-							if(ntext > 0){
+					insert(mark[0], inp->str, len, 0);
+					mark[0] = mark[1] = mark[0]+len;
+				}
+				if(inp->begin & KeyBackSpace){
+					if(mark[0] > 0){
+						if(ntext > 0){
+							if(mark[0] == mark[1]){
 								erase(mark[0]-1, mark[0], 0);
 								mark[0] = mark[1] = mark[0]-1;
+							} else {
+								erase(mark[0], mark[1], 0);
+								mark[1] = mark[0];
 							}
 						}
 					}
 				}
-				if(keypress(inp, KeyLeft)){
-					if(mark[0] > 0)
-						mark[0]--;
+			}
+
+			if(keypress(inp, KeyLeft)){
+				if(mark[0] > 0)
+					mark[0]--;
+				if((inp->on & KeyShift) == 0)
 					mark[1] = mark[0];
-				}
-				if(keypress(inp, KeyRight)){
-					if(mark[0] < ntext)
-						mark[0]++;
-					mark[1] = mark[0];
-				}
-			} 
+			}
+
+			if(keypress(inp, KeyRight)){
+				if(mark[1] < ntext)
+					mark[1]++;
+				if((inp->on & KeyShift) == 0)
+					mark[0] = mark[1];
+			}
 
 			if(select == 0 && mousebegin(inp) == Mouse1){
 				sel0[0] = inp->xy[0]-uoff;
@@ -308,11 +338,13 @@ main(int argc, char *argv[])
 				select = 1;
 				nmark = 0;
 			}
+
 			if(select && mousemove(inp) == Mouse1){
 				sel1[0] = inp->xy[0]-uoff;
 				sel1[1] = inp->xy[1]-voff;
 				nmark = 0;
 			}
+
 			if(select && mouseend(inp) == Mouse1){
 				sel1[0] = inp->xy[0]-uoff;
 				sel1[1] = inp->xy[1]-voff;
@@ -330,12 +362,14 @@ main(int argc, char *argv[])
 				dragv0 = inp->xy[1];
 				drag = 1;
 			}
+
 			if(drag && mousemove(inp) == Mouse3){
 				uoff += inp->xy[0] - dragu0;
 				voff += inp->xy[1] - dragv0;
 				dragu0 = inp->xy[0];
 				dragv0 = inp->xy[1];
 			}
+
 			if(drag && mouseend(inp) == Mouse3){
 				uoff += inp->xy[0] - dragu0;
 				voff += inp->xy[1] - dragv0;
@@ -351,6 +385,7 @@ main(int argc, char *argv[])
 					nmark = 0;
 				}
 			}
+
 			if(mousebegin(inp) == Mouse5){
 				voff += linespace();
 				if(select){
@@ -377,10 +412,7 @@ main(int argc, char *argv[])
 			sel1fix[1] = sel1[1] < textr.v0 ? textr.v0+voff : (sel1[1] + voff);
 			drawtext(textr, sel0fix, sel1fix);
 
-			/*
-			 *	blend background in. commented out because it's a bit of a dog on
-			 *	the raspberry
-			 */
+			/*commented out because it's a bit of a dog on the raspberry */
 			//blend_add_under(&screen, screen.r, bgcolor);
 		}
 	}

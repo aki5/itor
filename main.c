@@ -23,14 +23,16 @@ Image *fgcolor;
 Image *bgcolor;
 uchar selcval[4];
 
+short marku[2];
+short markv[2];
 int mark[2];
 int nmark;
 
 /*
- *	drawtext draws the main text panel view. it also computes
+ *	drawtext draws the main text view. it also computes
  *	mark[0] and mark[1] from mouse selection in case they weren't
  *	already set. It is important that the routine covers all of 
- *	dstr, otherwise it may miss hit-testing on the mouse select.
+ *	dstr, otherwise it may miss hit-testing select.
  */
 void
 drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
@@ -72,37 +74,28 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 			lr = drawchar(dst, r, code, fgcolor);
 			break;
 		}
-		if(nmark < 2 && ptinrect(sel0, &lr))
-			mark[nmark++] = sp-text;
-		if(nmark < 2 && ptinrect(sel1, &lr))
-			mark[nmark++] = sp-text;
-
+		if(nmark < 2 && ptinrect(sel0, &lr)){
+			mark[nmark] = sp-text;
+			nmark++;
+		}
+		if(nmark < 2 && ptinrect(sel1, &lr)){
+			mark[nmark] = sp-text;
+			nmark++;
+		}
 		if(nmark > 0 && mark[0] == sp-text){
+			marku[0] = lr.u0 - uoff;
+			markv[0] = lr.v0 - voff;
+			insel = 1;
+		}
+		if(nmark > 1 && mark[1] == sp-text){
+			marku[1] = lr.u0 - uoff;
+			markv[1] = lr.v0 - voff;
+			insel = 0;
 			blend2(
 				dst,
 				rect(lr.u0, lr.v0, lr.u0+2, lr.vend),
 				selcolor,
 				BlendUnder
-			);
-			drawcircle(
-				dst, 
-				dstr,
-				pt(r.u0<<4, (r.v0-linespace()/2)<<4),
-				(linespace()/2)<<4,
-				4,
-				selcval
-			);
-			insel = 1;
-		}
-		if(nmark > 1 && mark[1] == sp-text){
-			insel = 0;
-			drawcircle(
-				dst, 
-				dstr,
-				pt(r.u0<<4, (r.vend+linespace()/2-1)<<4),
-				(linespace()/2)<<4,
-				4,
-				selcval
 			);
 		}
 
@@ -118,8 +111,12 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 			r.u0 += rectw(&lr);
 		}
 	}
-	while(nmark < 2)
-		mark[nmark++] = sp-text;
+	while(nmark < 2){
+		marku[nmark] = r.u0 - uoff;
+		markv[nmark] = r.v0 - voff;
+		mark[nmark] = sp-text;
+		nmark++;
+	}
 	if(mark[0] == sp-text){
 		blend2(
 			dst,
@@ -127,23 +124,27 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 			selcolor,
 			BlendUnder
 		);
-		drawcircle(
-			dst, 
-			dstr,
-			pt(r.u0<<4, (r.v0-linespace()/2)<<4),
-			(linespace()/2)<<4,
-			4,
-			selcval
-		);
-		drawcircle(
-			dst, 
-			dstr,
-			pt(r.u0<<4, (r.vend+linespace()/2-1)<<4),
-			(linespace()/2)<<4,
-			4,
-			selcval
-		);
 	}
+
+	if(ptinrect(pt(marku[0]+uoff, markv[0]+voff), &dstr))
+	drawcircle(
+		dst, 
+		dstr,
+		pt((marku[0]+uoff)<<4, ((markv[0]+voff)-linespace()/2)<<4),
+		(linespace()/2)<<4,
+		4,
+		selcval
+	);
+
+	if(ptinrect(pt(marku[1]+uoff, markv[1]+voff), &dstr))
+	drawcircle(
+		dst, 
+		dstr,
+		pt((marku[1]+uoff)<<4, ((markv[1]+voff)+linespace()+linespace()/2-1)<<4),
+		(linespace()/2)<<4,
+		4,
+		selcval
+	);
 }
 
 /*
@@ -280,7 +281,7 @@ main(int argc, char *argv[])
 	setfontsize(fontsize);
 	drawinit(50*fontem(),800);
 
-#if 1
+#if 0
 	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
 	bgcolor = allocimage(rect(0,0,1,1), color(255, 240, 240, 255));
 	selcval[0] = 80;
@@ -324,6 +325,8 @@ main(int argc, char *argv[])
 
 	short sel0[2] = {0};
 	short sel1[2] = {0};
+
+	short seloff[2] = {0};
 
 	//drawanimate(1);
 
@@ -426,23 +429,65 @@ main(int argc, char *argv[])
 			}
 
 			if(select == 0 && mousebegin(inp) == Mouse1){
-				sel0[0] = inp->xy[0]-uoff;
-				sel0[1] = inp->xy[1]-voff;
-				sel1[0] = inp->xy[0]-uoff;
-				sel1[1] = inp->xy[1]-voff;
-				select = 1;
+				if(ptinellipse(
+					inp->xy,
+					pt(marku[0]+uoff, markv[0]+voff-linespace()/2),
+					pt(marku[0]+uoff, markv[0]+voff-linespace()/2),
+					linespace()
+				)){
+fprintf(stderr, "mark0 hit!\n");
+					seloff[0] = -(marku[0] - (inp->xy[0]-uoff));
+					seloff[1] = -(markv[0] - (inp->xy[1]-voff) + linespace()/2);
+					sel0[0] = inp->xy[0] - uoff - seloff[0];
+					sel0[1] = inp->xy[1] - voff - seloff[1];
+					sel1[0] = marku[1];
+					sel1[1] = markv[1];
+					select = 2;
+				} else if(ptinellipse(
+					inp->xy,
+					pt(marku[1]+uoff, markv[1]+voff+3*linespace()/2-1),
+					pt(marku[1]+uoff, markv[1]+voff+3*linespace()/2-1),
+					linespace()
+				)){
+fprintf(stderr, "mark1 hit!\n");
+					seloff[0] = -(marku[1] - (inp->xy[0]-uoff));
+					seloff[1] = -(markv[1] - (inp->xy[1]-voff)+linespace()/2);
+					sel0[0] = inp->xy[0] - uoff - seloff[0];
+					sel0[1] = inp->xy[1] - voff - seloff[1];
+					sel1[0] = marku[0];
+					sel1[1] = markv[0];
+					select = 3;
+				} else {
+					seloff[0] = 0;
+					seloff[1] = 0;
+					sel0[0] = inp->xy[0]-uoff;
+					sel0[1] = inp->xy[1]-voff;
+					sel1[0] = inp->xy[0]-uoff;
+					sel1[1] = inp->xy[1]-voff;
+					select = 1;
+					nmark = 0;
+				}
+			}
+
+			if(select != 0 && mousemove(inp) == Mouse1){
+				if(select == 1){
+					sel1[0] = inp->xy[0]-uoff;
+					sel1[1] = inp->xy[1]-voff;
+				} else if(select > 1){
+					sel0[0] = inp->xy[0] - uoff - seloff[0];
+					sel0[1] = inp->xy[1] - voff - seloff[1];
+				}
 				nmark = 0;
 			}
 
-			if(select && mousemove(inp) == Mouse1){
-				sel1[0] = inp->xy[0]-uoff;
-				sel1[1] = inp->xy[1]-voff;
-				nmark = 0;
-			}
-
-			if(select && mouseend(inp) == Mouse1){
-				sel1[0] = inp->xy[0]-uoff;
-				sel1[1] = inp->xy[1]-voff;
+			if(select != 0 && mouseend(inp) == Mouse1){
+				if(select == 1){
+					sel1[0] = inp->xy[0]-uoff;
+					sel1[1] = inp->xy[1]-voff;
+				} else if(select > 1){
+					sel0[0] = inp->xy[0] - uoff - seloff[0];
+					sel0[1] = inp->xy[1] - voff - seloff[1];
+				}
 				select = 0;
 				nmark = 0;
 			}

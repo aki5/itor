@@ -4,6 +4,12 @@
  *
  *	I'd like to blame X11 for that, but as long as X11 is the only
  *	back-end we have, there's really nothing to compare it with.
+ *
+ *	It seems very important that input events are timely. High frame rate
+ *	is not very useful if your input isn't seen by your program until many
+ *	frames later. I'd rather take 20fps and instant reaction, but that's
+ *	not the kind of tradeoff this is. Just making a note that latency is
+ *	probably more important than throughput in this area too.
  */
 #include "os.h"
 #include "draw3.h"
@@ -29,7 +35,7 @@ int mark[2];
 int nmark;
 
 /*
- *	drawtext draws the main text view. it also computes
+ *	Drawtext draws the main text view. it also computes
  *	mark[0] and mark[1] from mouse selection in case they weren't
  *	already set. It is important that the routine covers all of 
  *	dstr, otherwise it may miss hit-testing select.
@@ -71,7 +77,7 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 			lr = rect(r.u0, r.v0, r.u0+dx, r.v0+linespace());
 			break;
 		default:
-			lr = drawchar(dst, r, code, fgcolor);
+			lr = drawchar(dst, r, fgcolor, BlendOver, code);
 			break;
 		}
 		if(nmark < 2 && ptinrect(sel0, &lr)){
@@ -126,30 +132,35 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 		);
 	}
 
-	if(ptinrect(pt(marku[0]+uoff, markv[0]+voff), &dstr))
-	drawcircle(
-		dst, 
-		dstr,
-		pt((marku[0]+uoff)<<4, ((markv[0]+voff)-linespace()/2)<<4),
-		(linespace()/2)<<4,
-		4,
-		selcval
-	);
+	if(ptinrect(pt(marku[0]+uoff, markv[0]+voff), &dstr)){
+		blendcircle(
+			dst, 
+			dstr,
+			selcolor,
+			BlendUnder,
+			pt((marku[0]+uoff)<<4, ((markv[0]+voff)-linespace()/2)<<4),
+			(linespace()/2)<<4,
+			4
+		);
+	}
 
-	if(ptinrect(pt(marku[1]+uoff, markv[1]+voff), &dstr))
-	drawcircle(
-		dst, 
-		dstr,
-		pt((marku[1]+uoff)<<4, ((markv[1]+voff)+linespace()+linespace()/2-1)<<4),
-		(linespace()/2)<<4,
-		4,
-		selcval
-	);
+	if(ptinrect(pt(marku[1]+uoff, markv[1]+voff), &dstr)){
+		blendcircle(
+			dst, 
+			dstr,
+			selcolor,
+			BlendUnder,
+			pt((marku[1]+uoff)<<4, ((markv[1]+voff)+linespace()+linespace()/2-1)<<4),
+				(linespace()/2)<<4,
+				4
+		);
+	}
 }
 
 /*
  *	the undo mechanism follows; it's just an array of operations
- *	that were done, with enough data to reverse (or forward) them.
+ *	that were done, with enough data to reverse (or forward) them
+ *	to undo (or redo) the operation in question.
  */
 enum {
 	OpInsert = 1,
@@ -244,6 +255,16 @@ save(void)
 	return 0;
 }
 
+char *
+tryfont(char *fontname)
+{
+	if((fd = open(fontname, O_RDONLY)) == -1)
+		fontname = NULL;
+	else
+		close(fd);
+	return fontname;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -252,8 +273,12 @@ main(int argc, char *argv[])
 	int fontsize;
 	int opt, fgci;
 
-	//fontname = "/usr/share/fonts/truetype/droid/DroidSans.ttf";
-	fontname = "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf";
+	fontname = tryfont("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf");
+	if(fontname == NULL)
+		fontname = tryfont("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansCondensed.ttf");
+	if(fontname == NULL)
+		fontname = tryfont("/usr/share/fonts/truetype/droid/DroidSans.ttf");
+
 	fontsize = 9;
 	fgci = 2;
 	while((opt = getopt(argc, argv, "f:s:c:")) != -1){
@@ -262,7 +287,7 @@ main(int argc, char *argv[])
 			fgci = atoi(optarg);
 			break;
 		case 'f':
-			fontname = optarg;
+			fontname = tryfont(optarg);
 			break;
 		case 's':
 			fontsize = atoi(optarg);
@@ -277,9 +302,14 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if(fontname == NULL){
+		fprintf(stderr, "could not open font\n");
+		exit(1);
+	}
+
 	initdrawstr(fontname); 
 	setfontsize(fontsize);
-	drawinit(50*fontem(),800);
+	drawinit(60*fontem(),800);
 
 #if 0
 	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
@@ -292,6 +322,7 @@ main(int argc, char *argv[])
 #else
 	uchar cval[4];
 	// this may be my new favorite green: color(150, 200, 80, 255));
+	//cval[0] = 80; cval[1] = 200; cval[2] = 150; cval[3] = 255;
 	idx2color(fgci, cval);
 	fgcolor = allocimage(rect(0,0,1,1), cval);
 	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
@@ -382,8 +413,12 @@ main(int argc, char *argv[])
 				}
 			}
 
-			if(keystr(inp, "v") && (inp->on & KeyControl) != 0)
+			if(keystr(inp, "v") && (inp->on & KeyControl) != 0){
+				if(mark[0] != mark[1])
+					erase(mark[0], mark[1], 0);
 				insert(mark[0], clip, nclip, 0);
+				mark[1] = mark[0] + nclip;
+			}
 
 			if((keystr(inp, "q")) && (inp->on & KeyControl) != 0)
 				exit(0);
@@ -428,14 +463,28 @@ main(int argc, char *argv[])
 					mark[0] = mark[1];
 			}
 
+			if(keypress(inp, KeyDown)){
+				sel0[0] = marku[0];
+				sel0[1] = markv[0] + linespace();
+				sel1[0] = marku[1];
+				sel1[1] = markv[1] + linespace();
+				nmark = 0;
+			}
+			if(keypress(inp, KeyUp)){
+				sel0[0] = marku[0];
+				sel0[1] = markv[0] - linespace();
+				sel1[0] = marku[1];
+				sel1[1] = markv[1] - linespace();
+				nmark = 0;
+			}
+			/* Text selection by a pointing device, also the tweaking blobs. */
 			if(select == 0 && mousebegin(inp) == Mouse1){
 				if(ptinellipse(
 					inp->xy,
 					pt(marku[0]+uoff, markv[0]+voff-linespace()/2),
 					pt(marku[0]+uoff, markv[0]+voff-linespace()/2),
-					linespace()
+					linespace()/2
 				)){
-fprintf(stderr, "mark0 hit!\n");
 					seloff[0] = -(marku[0] - (inp->xy[0]-uoff));
 					seloff[1] = -(markv[0] - (inp->xy[1]-voff) + linespace()/2);
 					sel0[0] = inp->xy[0] - uoff - seloff[0];
@@ -447,9 +496,8 @@ fprintf(stderr, "mark0 hit!\n");
 					inp->xy,
 					pt(marku[1]+uoff, markv[1]+voff+3*linespace()/2-1),
 					pt(marku[1]+uoff, markv[1]+voff+3*linespace()/2-1),
-					linespace()
+					linespace()/2
 				)){
-fprintf(stderr, "mark1 hit!\n");
 					seloff[0] = -(marku[1] - (inp->xy[0]-uoff));
 					seloff[1] = -(markv[1] - (inp->xy[1]-voff)+linespace()/2);
 					sel0[0] = inp->xy[0] - uoff - seloff[0];
@@ -469,27 +517,26 @@ fprintf(stderr, "mark1 hit!\n");
 				}
 			}
 
-			if(select != 0 && mousemove(inp) == Mouse1){
+			if(select != 0 && (mousemove(inp) == Mouse1) || (mouseend(inp) == Mouse1)){
 				if(select == 1){
 					sel1[0] = inp->xy[0]-uoff;
 					sel1[1] = inp->xy[1]-voff;
-				} else if(select > 1){
+				} else if(select == 2){
+					short tmp;
 					sel0[0] = inp->xy[0] - uoff - seloff[0];
-					sel0[1] = inp->xy[1] - voff - seloff[1];
+					tmp = inp->xy[1] - voff - seloff[1];
+					if(tmp <= sel1[1]+linespace()-1)
+						sel0[1] = tmp;
+				} else if(select == 3){
+					short tmp;
+					sel0[0] = inp->xy[0] - uoff - seloff[0];
+					tmp = inp->xy[1] - voff - seloff[1];
+					if(tmp >= sel1[1])
+						sel0[1] = tmp; 
 				}
 				nmark = 0;
-			}
-
-			if(select != 0 && mouseend(inp) == Mouse1){
-				if(select == 1){
-					sel1[0] = inp->xy[0]-uoff;
-					sel1[1] = inp->xy[1]-voff;
-				} else if(select > 1){
-					sel0[0] = inp->xy[0] - uoff - seloff[0];
-					sel0[1] = inp->xy[1] - voff - seloff[1];
-				}
-				select = 0;
-				nmark = 0;
+				if(mouseend(inp) == Mouse1)
+					select = 0;
 			}
 
 			if(mousebegin(inp) == Mouse2){
@@ -533,7 +580,6 @@ fprintf(stderr, "mark1 hit!\n");
 					nmark = 0;
 				}
 			}
-
 		}
 		if(1){
 			static double st = 0.0, et = 0.0;
@@ -564,7 +610,7 @@ fprintf(stderr, "mark1 hit!\n");
 			st = et;
 
 			/*commented out because it's a bit of a dog on the raspberry */
-			blend2(&screen, textr, bgcolor, BlendUnder);
+			//blend2(&screen, textr, bgcolor, BlendUnder);
 		}
 	}
 

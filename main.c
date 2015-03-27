@@ -287,6 +287,8 @@ main(int argc, char *argv[])
 	if(fontname == NULL)
 		fontname = tryfont("/System/Library/Fonts/Monaco.dfont");
 	if(fontname == NULL)
+		fontname = tryfont("/home/aki/Monaco.dfont");
+	if(fontname == NULL)
 		fontname = tryfont("/opt/X11/share/fonts/TTF/Vera.ttf");
 	if(fontname == NULL)
 		fontname = tryfont("/opt/X11/share/fonts/TTF/VeraMono.ttf");

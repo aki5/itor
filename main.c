@@ -7,9 +7,10 @@
  *
  *	It seems very important that input events are timely. High frame rate
  *	is not very useful if your input isn't seen by your program until many
- *	frames later. I'd rather take 20fps and instant reaction, but that's
- *	not the kind of tradeoff this is. Just making a note that latency is
- *	probably more important than throughput in this area too.
+ *	frames later. I'd rather take 20fps and instant reaction than 60fps
+ *	with a 3 frame delay. But that's not the kind of tradeoff this is.
+ *	Just making a note that latency is probably more important than
+ *	throughput in this area too.
  */
 #include "os.h"
 #include "draw3.h"
@@ -130,6 +131,15 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 			selcolor,
 			BlendUnder
 		);
+		/*
+		 *	TODO: this is a hack to get appending to the end right,
+		 *	I don't really understand why the loop above doesn't cut it
+		 */
+		marku[0] = r.u0 - uoff;
+		markv[0] = r.v0 - voff;
+		marku[1] = r.u0 - uoff;
+		markv[1] = r.v0 - voff;
+
 	}
 
 	if(ptinrect(pt(marku[0]+uoff, markv[0]+voff), &dstr)){
@@ -158,9 +168,10 @@ drawtext(Image *dst, Rect dstr, short *sel0x, short *sel1x)
 }
 
 /*
- *	the undo mechanism follows; it's just an array of operations
- *	that were done, with enough data to reverse (or forward) them
- *	to undo (or redo) the operation in question.
+ *	The undo mechanism: it's just an array of operations
+ *	that were done, with enough data to reverse (or forward) one.
+ *	Every edit is either an insert or an erase. Should be enough for
+ *	everyone :)
  */
 enum {
 	OpInsert = 1,
@@ -269,17 +280,29 @@ int
 main(int argc, char *argv[])
 {
 	Input *inp, *einp;
-	char *fontname;
+	char *fontname = NULL;
 	int fontsize;
 	int opt, fgci;
-
-	fontname = tryfont("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf");
+	
+	if(fontname == NULL)
+		fontname = tryfont("/System/Library/Fonts/Monaco.dfont");
+	if(fontname == NULL)
+		fontname = tryfont("/opt/X11/share/fonts/TTF/Vera.ttf");
+	if(fontname == NULL)
+		fontname = tryfont("/opt/X11/share/fonts/TTF/VeraMono.ttf");
+	if(fontname == NULL)
+		fontname = tryfont("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansMono.ttf");
 	if(fontname == NULL)
 		fontname = tryfont("/usr/share/fonts/truetype/ttf-dejavu/DejaVuSansCondensed.ttf");
 	if(fontname == NULL)
 		fontname = tryfont("/usr/share/fonts/truetype/droid/DroidSans.ttf");
 
-	fontsize = 9;
+	/*
+	 *	fontsize 11 is pretty good on a regular display,
+	 *	retina displays could use way more. could also try
+	 *	doing fonts with the dpi stuff..
+	 */
+	fontsize = 11; 
 	fgci = 2;
 	while((opt = getopt(argc, argv, "f:s:c:")) != -1){
 		switch(opt){
@@ -367,25 +390,26 @@ main(int argc, char *argv[])
 			if(nmark == 2 && mark[0] > mark[1])
 				abort();
 
-			if(keystr(inp, "s") && (inp->on & KeyControl) != 0)
+			/* Meta is the cmd key on macs */
+			if(keystr(inp, "s") && (inp->on & (KeyMeta|KeyControl)) != 0)
 				save();
 
-			if(keystr(inp, "z") && (inp->on & KeyControl) != 0)
+			if(keystr(inp, "z") && (inp->on & (KeyMeta|KeyControl)) != 0)
 				undo();
 
-			if((keystr(inp, "=") || keystr(inp, "+")) && (inp->on & KeyControl) != 0){
+			if((keystr(inp, "=") || keystr(inp, "+")) && (inp->on & (KeyMeta|KeyControl)) != 0){
 				fontsize++;
 				setfontsize(fontsize);
 			}
 
-			if(keystr(inp, "-") && (inp->on & KeyControl) != 0){
+			if(keystr(inp, "-") && (inp->on & (KeyMeta|KeyControl)) != 0){
 				if(fontsize > 4){
 					fontsize--;
 					setfontsize(fontsize);
 				}
 			}
 
-			if(keystr(inp, "c") && (inp->on & KeyControl) != 0){
+			if(keystr(inp, "c") && (inp->on & (KeyMeta|KeyControl)) != 0){
 				if(aclip < mark[1]-mark[0]){
 					aclip = mark[1]-mark[0];
 					clip = realloc(clip, aclip);
@@ -394,7 +418,7 @@ main(int argc, char *argv[])
 				nclip = mark[1]-mark[0];
 			}
 
-			if(keystr(inp, "x") && (inp->on & KeyControl) != 0){
+			if(keystr(inp, "x") && (inp->on & (KeyMeta|KeyControl)) != 0){
 				if(mark[0] < mark[1]){
 					if(aclip < mark[1]-mark[0]){
 						aclip = mark[1]-mark[0];
@@ -413,17 +437,17 @@ main(int argc, char *argv[])
 				}
 			}
 
-			if(keystr(inp, "v") && (inp->on & KeyControl) != 0){
+			if(keystr(inp, "v") && (inp->on & (KeyMeta|KeyControl)) != 0){
 				if(mark[0] != mark[1])
 					erase(mark[0], mark[1], 0);
 				insert(mark[0], clip, nclip, 0);
 				mark[1] = mark[0] + nclip;
 			}
 
-			if((keystr(inp, "q")) && (inp->on & KeyControl) != 0)
+			if((keystr(inp, "q")) && (inp->on & (KeyMeta|KeyControl)) != 0)
 				exit(0);
 
-			if((inp->on & KeyControl) == 0){
+			if((inp->on & (KeyMeta|KeyControl)) == 0){
 				if(inp->begin & KeyStr){
 					int len;
 					len = strlen(inp->str);
@@ -517,7 +541,7 @@ main(int argc, char *argv[])
 				}
 			}
 
-			if(select != 0 && (mousemove(inp) == Mouse1) || (mouseend(inp) == Mouse1)){
+			if(select != 0 && ((mousemove(inp) == Mouse1) || (mouseend(inp) == Mouse1))){
 				if(select == 1){
 					sel1[0] = inp->xy[0]-uoff;
 					sel1[1] = inp->xy[1]-voff;
@@ -565,6 +589,12 @@ main(int argc, char *argv[])
 				drag = 0;
 			}
 
+			/*
+			 *	These are the mouse wheel actions, linespace seems a little too fast
+			 *	on a mac, yet it seems a little too slow for linux.. the mice just work 
+			 *	very differently by default. A stupid compromise that gives unsatisfactory
+			 *	but usable scroll on both. Sigh.
+			 */
 			if(mousebegin(inp) == Mouse4){
 				voff -= linespace();
 				if(select){
@@ -602,9 +632,10 @@ main(int argc, char *argv[])
 					textr.uend,
 					textr.v0+linespace()
 				),
+				fgcolor,
+				BlendOver,
 				msg,
-				n,
-				fgcolor
+				n
 			);
 
 			st = et;
@@ -616,4 +647,3 @@ main(int argc, char *argv[])
 
 	return 0;
 }
-

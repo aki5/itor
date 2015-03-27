@@ -6,6 +6,7 @@ include $(ROOT)/libdraw3/libdraw3.mk
 
 CFLAGS=\
 	-O3 -fomit-frame-pointer \
+	-I/opt/local/include \
 	-I$(ROOT)/libdraw3 \
 	#-static-libasan -fsanitize=address \
 

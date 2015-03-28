@@ -8,6 +8,7 @@ CFLAGS=\
 	-O3 -fomit-frame-pointer \
 	-I/opt/local/include \
 	-I$(ROOT)/libdraw3 \
+	-W -Wall\
 	#-static-libasan -fsanitize=address \
 
 itor: main.o $(LIBDRAW3)

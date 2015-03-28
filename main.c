@@ -375,9 +375,8 @@ main(int argc, char *argv[])
 
 	int drag = 0;
 	int select = 0;
-	int repaint;
 	int dragu0, dragv0;
-	int mouse, m;
+	int m;
 
 	short sel0[2] = {0};
 	short sel1[2] = {0};
@@ -387,7 +386,6 @@ main(int argc, char *argv[])
 	//drawanimate(1);
 
 	for(;;){
-		repaint = 0;
 		for(inp = drawevents(&einp); inp < einp; inp++){
 			if(nmark == 2 && mark[0] > mark[1])
 				abort();
@@ -570,7 +568,6 @@ main(int argc, char *argv[])
 			}
 
 			if(drag == 0 && (m = mousebegin(inp)) == Mouse3){
-				mouse = m;
 				dragu0 = inp->xy[0];
 				dragv0 = inp->xy[1];
 				drag = 1;

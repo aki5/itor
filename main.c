@@ -40,7 +40,6 @@ main(int argc, char *argv[])
 
 	Image *selcolor;
 	Image *fgcolor;
-	Image *bgcolor;
 	uchar selcval[4];
 	
 	if(fontname == NULL)
@@ -97,7 +96,6 @@ main(int argc, char *argv[])
 
 #if 0
 	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));
-	bgcolor = allocimage(rect(0,0,1,1), color(255, 240, 240, 255));
 	selcval[0] = 80;
 	selcval[1] = 90;
 	selcval[2] = 70;
@@ -105,11 +103,12 @@ main(int argc, char *argv[])
 	selcolor = allocimage(rect(0,0,1,1), selcval);
 #else
 	uchar cval[4];
-	// this may be my new favorite green: color(150, 200, 80, 255));
-	cval[0] = 80; cval[1] = 200; cval[2] = 150; cval[3] = 255;
-	//idx2color(fgci, cval);
+	if(fgci == 0){ // my new favorite green
+		cval[0] = 80; cval[1] = 200; cval[2] = 150; cval[3] = 255;
+	} else {
+		idx2color(fgci, cval);
+	}
 	fgcolor = allocimage(rect(0,0,1,1), cval);
-	bgcolor = allocimage(rect(0,0,1,1), color(0,40,40,255));
 	selcval[0] = cval[0]/2;
 	selcval[1] = cval[1]/2;
 	selcval[2] = cval[2]/2;

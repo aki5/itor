@@ -6,7 +6,7 @@ ifeq ($(shell uname -m), armv6l)
 	TARGET_ARCH=arm6
 endif
 
-CFLAGS=-O2 -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
+CFLAGS=-Os -fomit-frame-pointer -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
 
 OFILES=\
 	main.o\

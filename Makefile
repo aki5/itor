@@ -6,7 +6,11 @@ ifeq ($(shell uname -m), armv6l)
 	TARGET_ARCH=arm6
 endif
 
-CFLAGS=-g -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
+CFLAGS=-O2 -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
+
+OFILES=\
+	main.o\
+	textedit.o\
 
 all: itor-x11 itor-linuxfb
 
@@ -15,11 +19,11 @@ all: itor-x11 itor-linuxfb
 
 include $(ROOT)/libdraw3/libdraw3.mk
 
-itor-x11: main.o $(LIBDRAW3_X11)
-	$(CC) $(CFLAGS) -o $@ main.o $(LIBDRAW3_X11) $(LIBDRAW3_X11_LIBS)
+itor-x11: $(OFILES) $(LIBDRAW3_X11)
+	$(CC) $(CFLAGS) -o $@ $(OFILES) $(LIBDRAW3_X11) $(LIBDRAW3_X11_LIBS)
 
-itor-linuxfb: main.o $(LIBDRAW3_LINUXFB)
-	$(CC) $(CFLAGS) -o $@ main.o $(LIBDRAW3_LINUXFB) $(LIBDRAW3_LINUXFB_LIBS)
+itor-linuxfb: $(OFILES) $(LIBDRAW3_LINUXFB)
+	$(CC) $(CFLAGS) -o $@ $(OFILES) $(LIBDRAW3_LINUXFB) $(LIBDRAW3_LINUXFB_LIBS)
 
 clean:
 	rm -rf *.o itor-x11 itor-linuxfb perf.*

@@ -92,7 +92,11 @@ main(int argc, char *argv[])
 
 	initdrawstr(fontname); 
 	setfontsize(fontsize);
-	drawinit(60*fontem(),800);
+
+	if(drawinit(60*fontem(),800) == -1){
+		fprintf(stderr, "drawinit failed\n");
+		exit(1);	
+	}
 
 #if 0
 	fgcolor = allocimage(rect(0,0,1,1), color(0, 0, 0, 255));

@@ -133,14 +133,17 @@ main(int argc, char *argv[])
 		}
 	}
 
-	inittextedit(&mainview, &screen, text, ntext);
+	inittextedit(&mainview, &screen, screen.r, text, ntext);
 	mainview.fgcolor = fgcolor;
 	mainview.selcolor = selcolor;
 
 	for(;;){
 		inp = drawevents(&inep);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
+		int tmp = screen.r.uend;
+		screen.r.uend = 900;
 		textedit(&mainview, inp, inep);
+		screen.r.uend = tmp;
 	}
 
 	return 0;

@@ -71,11 +71,12 @@ undo(Textedit *texp)
 
 
 void
-inittextedit(Textedit *texp, Image *dst, Rect dstr, char *text, int ntext)
+inittextedit(Textedit *texp, Image *dst, Rect dstr, int pad, char *text, int ntext)
 {
 	memset(texp, 0, sizeof texp[0]);
 	texp->dst = dst;
 	texp->dstr = dstr;
+	texp->pad = pad;
 	texp->text = text;
 	texp->ntext = ntext;
 	texp->atext = ntext;
@@ -321,7 +322,12 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 
 	Rect tmpr;
 	tmpr = texp->dst->r;
+
 	texp->dst->r = dstr;
+	texp->dst->r.u0 -= texp->pad;
+	texp->dst->r.v0 -= texp->pad;
+	texp->dst->r.uend += texp->pad;
+	texp->dst->r.vend += texp->pad;
 
 
 	sel0[0] = texp->sel0[0] < dstr.u0 ? dstr.u0+texp->uoff : (texp->sel0[0] + texp->uoff);
@@ -330,7 +336,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	sel1[1] = texp->sel1[1] < dstr.v0 ? dstr.v0+texp->voff : (texp->sel1[1] + texp->voff);
 
 	insel = 0;
-	texp->uoff = 0; /* this is ugly */
+	//texp->uoff = 0; /* this is ugly */
 	r.u0 = dstr.u0 + texp->uoff;
 	r.v0 = dstr.v0 + texp->voff;
 	r.uend = dstr.uend;
@@ -421,7 +427,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	//if(ptinrect(pt(texp->marku[0]+texp->uoff, texp->markv[0]+texp->voff), &dstr)){
 		blendcircle(
 			texp->dst, 
-			dstr,
+			texp->dst->r,
 			texp->selcolor,
 			BlendUnder,
 			pt((texp->marku[0]+texp->uoff)<<4, ((texp->markv[0]+texp->voff)-linespace()/2)<<4),
@@ -433,7 +439,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	//if(ptinrect(pt(texp->marku[1]+texp->uoff, texp->markv[1]+texp->voff), &dstr)){
 		blendcircle(
 			texp->dst, 
-			dstr,
+			texp->dst->r,
 			texp->selcolor,
 			BlendUnder,
 			pt((texp->marku[1]+texp->uoff)<<4, ((texp->markv[1]+texp->voff)+linespace()+linespace()/2-1)<<4),

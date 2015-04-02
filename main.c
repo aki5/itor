@@ -16,7 +16,9 @@
 #include "draw3.h"
 #include "textedit.h"
 
-Textedit mainview;
+enum { Bord = 10, Pad = 10 };
+
+static Textedit mainview;
 
 char *
 tryfont(char *fontname)
@@ -116,7 +118,7 @@ main(int argc, char *argv[])
 		idx2color(fgci, cval);
 	}
 
-	bordcval[0] = 80; bordcval[1] = 200; bordcval[2] = 150; bordcval[3] = 127;
+	bordcval[0] = 80; bordcval[1] = 200; bordcval[2] = 150; bordcval[3] = 255;
 	bordcolor = allocimage(rect(0,0,1,1), bordcval);
 
 	fgcolor = allocimage(rect(0,0,1,1), cval);
@@ -148,6 +150,7 @@ main(int argc, char *argv[])
 		&mainview,
 		&screen,
 		rect(200,200,1000,800),
+		Pad,
 		text,
 		ntext
 	);
@@ -160,7 +163,6 @@ main(int argc, char *argv[])
 
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 
-		enum { Bord = 10, Pad = 10 };
 
 		/* top */
 		drawrect(

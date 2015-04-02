@@ -319,6 +319,11 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 
 	dstr = texp->dstr;
 
+	Rect tmpr;
+	tmpr = texp->dst->r;
+	texp->dst->r = dstr;
+
+
 	sel0[0] = texp->sel0[0] < dstr.u0 ? dstr.u0+texp->uoff : (texp->sel0[0] + texp->uoff);
 	sel0[1] = texp->sel0[1] < dstr.v0 ? dstr.v0+texp->voff : (texp->sel0[1] + texp->voff);
 	sel1[0] = texp->sel1[0] < dstr.u0 ? dstr.u0+texp->uoff : (texp->sel1[0] + texp->uoff);
@@ -369,7 +374,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 			insel = 0;
 			blend2(
 				texp->dst,
-				cliprect(rect(lr.u0, lr.v0, lr.u0+2, lr.vend), dstr),
+				rect(lr.u0, lr.v0, lr.u0+2, lr.vend),
 				texp->selcolor,
 				pt(0,0),
 				BlendUnder
@@ -377,7 +382,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 		}
 
 		if(insel)
-			blend2(texp->dst, cliprect(lr, dstr), texp->selcolor, pt(0,0), BlendUnder);
+			blend2(texp->dst, lr, texp->selcolor, pt(0,0), BlendUnder);
 
 		if(code == '\n'){
 			r.u0 = dstr.u0 + texp->uoff;
@@ -397,7 +402,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	if(texp->mark[0] == sp-texp->text){
 		blend2(
 			texp->dst,
-			cliprect(rect(r.u0, r.v0, r.u0+2, r.vend), dstr),
+			rect(r.u0, r.v0, r.u0+2, r.vend),
 			texp->selcolor,
 			pt(0,0),
 			BlendUnder
@@ -413,7 +418,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 
 	}
 
-	if(ptinrect(pt(texp->marku[0]+texp->uoff, texp->markv[0]+texp->voff), &dstr)){
+	//if(ptinrect(pt(texp->marku[0]+texp->uoff, texp->markv[0]+texp->voff), &dstr)){
 		blendcircle(
 			texp->dst, 
 			dstr,
@@ -423,9 +428,9 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 			(linespace()/2)<<4,
 			4
 		);
-	}
+	//}
 
-	if(ptinrect(pt(texp->marku[1]+texp->uoff, texp->markv[1]+texp->voff), &dstr)){
+	//if(ptinrect(pt(texp->marku[1]+texp->uoff, texp->markv[1]+texp->voff), &dstr)){
 		blendcircle(
 			texp->dst, 
 			dstr,
@@ -435,5 +440,6 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 				(linespace()/2)<<4,
 				4
 		);
-	}
+	//}
+	texp->dst->r = tmpr;
 }

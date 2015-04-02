@@ -94,7 +94,7 @@ main(int argc, char *argv[])
 	setfontsize(fontsize);
 
 	//if(drawinit(60*fontem(),800) == -1){
-	if(drawinit(1920,1080) == -1){
+	if(drawinit(1920, 1080) == -1){
 		fprintf(stderr, "drawinit failed\n");
 		exit(1);	
 	}
@@ -138,7 +138,13 @@ main(int argc, char *argv[])
 		}
 	}
 
-	inittextedit(&mainview, &screen, screen.r, text, ntext);
+	inittextedit(
+		&mainview,
+		&screen,
+		rect(200,200,1000,800),
+		text,
+		ntext
+	);
 	mainview.fgcolor = fgcolor;
 	mainview.selcolor = selcolor;
 
@@ -146,7 +152,6 @@ main(int argc, char *argv[])
 		inp = drawevents(&inep);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 		int tmp = screen.r.uend;
-		screen.r.uend = 900;
 		textedit(&mainview, inp, inep);
 		screen.r.uend = tmp;
 	}

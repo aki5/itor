@@ -12,6 +12,8 @@ struct Editop {
 struct Textedit {
 	Image *dst;
 
+	Rect dstr;
+
 	char *text;
 	int ntext, atext;
 
@@ -44,4 +46,4 @@ struct Textedit {
 };
 
 void textedit(Textedit *texp, Input *inp, Input *inep);
-void inittextedit(Textedit *texp, Image *dst, char *text, int ntext);
+void inittextedit(Textedit *texp, Image *dst, Rect dstr, char *text, int ntext);

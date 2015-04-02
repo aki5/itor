@@ -7,6 +7,7 @@ ifeq ($(shell uname -m), armv6l)
 endif
 
 CFLAGS=-Os -fomit-frame-pointer -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
+#CFLAGS=-g -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
 
 OFILES=\
 	main.o\

@@ -93,7 +93,8 @@ main(int argc, char *argv[])
 	initdrawstr(fontname); 
 	setfontsize(fontsize);
 
-	if(drawinit(60*fontem(),800) == -1){
+	//if(drawinit(60*fontem(),800) == -1){
+	if(drawinit(1920,1080) == -1){
 		fprintf(stderr, "drawinit failed\n");
 		exit(1);	
 	}

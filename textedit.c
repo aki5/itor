@@ -3,19 +3,10 @@
 #include "draw3.h"
 #include "textedit.h"
 
-
 enum {
 	OpInsert = 1,
 	OpErase = 2,
 };
-
-
-/*
- *	The undo mechanism: it's just an array of operations
- *	that were done, with enough data to reverse (or forward) one.
- *	Every edit is either an insert or an erase. Should be enough for
- *	everyone :)
- */
 
 static void
 addop(Textedit *texp, int opcode, int mark, char *str, int len)
@@ -80,10 +71,11 @@ undo(Textedit *texp)
 
 
 void
-inittextedit(Textedit *texp, Image *dst, char *text, int ntext)
+inittextedit(Textedit *texp, Image *dst, Rect dstr, char *text, int ntext)
 {
 	memset(texp, 0, sizeof texp[0]);
 	texp->dst = dst;
+	texp->dstr = dstr;
 	texp->text = text;
 	texp->ntext = ntext;
 	texp->atext = ntext;
@@ -325,7 +317,7 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	short sel0[2];
 	short sel1[2];
 
-	dstr = texp->dst->r;
+	dstr = texp->dstr;
 
 	sel0[0] = texp->sel0[0] < dstr.u0 ? dstr.u0+texp->uoff : (texp->sel0[0] + texp->uoff);
 	sel0[1] = texp->sel0[1] < dstr.v0 ? dstr.v0+texp->voff : (texp->sel0[1] + texp->voff);
@@ -377,14 +369,15 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 			insel = 0;
 			blend2(
 				texp->dst,
-				rect(lr.u0, lr.v0, lr.u0+2, lr.vend),
+				cliprect(rect(lr.u0, lr.v0, lr.u0+2, lr.vend), dstr),
 				texp->selcolor,
+				pt(0,0),
 				BlendUnder
 			);
 		}
 
 		if(insel)
-			blend2(texp->dst, cliprect(lr, dstr), texp->selcolor, BlendUnder);
+			blend2(texp->dst, cliprect(lr, dstr), texp->selcolor, pt(0,0), BlendUnder);
 
 		if(code == '\n'){
 			r.u0 = dstr.u0 + texp->uoff;
@@ -404,8 +397,9 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	if(texp->mark[0] == sp-texp->text){
 		blend2(
 			texp->dst,
-			rect(r.u0, r.v0, r.u0+2, r.vend),
+			cliprect(rect(r.u0, r.v0, r.u0+2, r.vend), dstr),
 			texp->selcolor,
+			pt(0,0),
 			BlendUnder
 		);
 		/*

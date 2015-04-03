@@ -6,14 +6,20 @@ ifeq ($(shell uname -m), armv6l)
 	TARGET_ARCH=arm6
 endif
 
+TARGETS=itor-x11
+ifeq ($(shell uname -s), Linux)
+	TARGETS+=itor-linuxfb
+endif
+
 CFLAGS=-Os -fomit-frame-pointer -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
 #CFLAGS=-g -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
 
 OFILES=\
 	main.o\
 	textedit.o\
+	dragborder.o\
 
-all: itor-x11 itor-linuxfb
+all: $(TARGETS) 
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -27,7 +33,7 @@ itor-linuxfb: $(OFILES) $(LIBDRAW3_LINUXFB)
 	$(CC) $(CFLAGS) -o $@ $(OFILES) $(LIBDRAW3_LINUXFB) $(LIBDRAW3_LINUXFB_LIBS)
 
 clean:
-	rm -rf *.o itor-x11 itor-linuxfb perf.*
+	rm -rf *.o $(TARGETS) perf.*
 
 nuke: clean
 	make -C ../libdraw3 clean

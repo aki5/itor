@@ -15,10 +15,15 @@
 #include "os.h"
 #include "draw3.h"
 #include "textedit.h"
+#include "dragborder.h"
 
-enum { Bord = 10, Pad = 10 };
+enum {
+	Bord = 10,
+	Pad = 10
+};
 
 static Textedit mainview;
+static Dragborder dragbord;
 
 char *
 tryfont(char *fontname)
@@ -146,6 +151,7 @@ main(int argc, char *argv[])
 		}
 	}
 
+
 	inittextedit(
 		&mainview,
 		&screen,
@@ -163,208 +169,7 @@ main(int argc, char *argv[])
 
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 
-
-		/* top */
-		drawrect(
-			&screen,
-			rect(
-				mainview.dstr.u0,
-				mainview.dstr.v0-(Bord+Pad),
-				mainview.dstr.uend,
-				mainview.dstr.v0-Pad
-			),
-			bordcval
-		);
-
-		/* left */
-		drawrect(
-			&screen,
-			rect(
-				mainview.dstr.u0-(Bord+Pad),
-				mainview.dstr.v0,
-				mainview.dstr.u0-(Pad),
-				mainview.dstr.vend
-			),
-			bordcval
-		);
-
-		/* right */
-		drawrect(
-			&screen,
-			rect(
-				mainview.dstr.uend+Pad,
-				mainview.dstr.v0,
-				mainview.dstr.uend+(Bord+Pad),
-				mainview.dstr.vend
-			),
-			bordcval
-		);
-
-
-		/* bottom */
-		drawrect(
-			&screen,
-			rect(
-				mainview.dstr.u0,
-				mainview.dstr.vend+Pad,
-				mainview.dstr.uend,
-				mainview.dstr.vend+(Bord+Pad)
-			),
-			bordcval
-		);
-
-		/* top left add */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.u0-(Bord+Pad)-1,
-				mainview.dstr.v0-(Bord+Pad)-1,
-				mainview.dstr.u0,
-				mainview.dstr.v0
-			),
-			bordcolor,
-			BlendOver,
-			pt(
-				(mainview.dstr.u0-1)<<4,
-				(mainview.dstr.v0-1)<<4
-			),
-			(Bord+Pad)<<4,
-			4
-		);
-		/* top left sub */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.u0-(Bord+Pad)-1,
-				mainview.dstr.v0-(Bord+Pad)-1,
-				mainview.dstr.u0,
-				mainview.dstr.v0
-			),
-			fgcolor,
-			BlendSub,
-			pt(
-				(mainview.dstr.u0-1)<<4,
-				(mainview.dstr.v0-1)<<4
-			),
-			(Pad)<<4,
-			4
-		);
-
-		/* top right add */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.uend,
-				mainview.dstr.v0-(Bord+Pad)-1,
-				mainview.dstr.uend+(Bord+Pad),
-				mainview.dstr.v0
-			),
-			bordcolor,
-			BlendOver,
-			pt(
-				mainview.dstr.uend<<4,
-				(mainview.dstr.v0-1)<<4
-			),
-			(Bord+Pad)<<4,
-			4
-		);
-
-		/* top right sub */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.uend,
-				mainview.dstr.v0-(Bord+Pad)-1,
-				mainview.dstr.uend+(Bord+Pad),
-				mainview.dstr.v0
-			),
-			fgcolor,
-			BlendSub,
-			pt(
-				mainview.dstr.uend<<4,
-				(mainview.dstr.v0-1)<<4
-			),
-			(Pad)<<4,
-			4
-		);
-
-		/* bottom left add */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.u0-(Bord+Pad)-1,
-				mainview.dstr.vend,
-				mainview.dstr.u0,
-				mainview.dstr.vend+(Bord+Pad)
-			),
-			bordcolor,
-			BlendOver,
-			pt(
-				(mainview.dstr.u0-1)<<4,
-				mainview.dstr.vend<<4
-			),
-			(Bord+Pad)<<4,
-			4
-		);
-
-		/* bottom left sub */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.u0-(Bord+Pad)-1,
-				mainview.dstr.vend,
-				mainview.dstr.u0,
-				mainview.dstr.vend+(Bord+Pad)
-			),
-			fgcolor,
-			BlendSub,
-			pt(
-				(mainview.dstr.u0-1)<<4,
-				mainview.dstr.vend<<4
-			),
-			(Pad)<<4,
-			4
-		);
-
-		/* bottom right add */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.uend,
-				mainview.dstr.vend,
-				mainview.dstr.uend+(Bord+Pad),
-				mainview.dstr.vend+(Bord+Pad)
-			),
-			bordcolor,
-			BlendOver,
-			pt(
-				mainview.dstr.uend<<4,
-				mainview.dstr.vend<<4
-			),
-			(Bord+Pad)<<4,
-			4
-		);
-
-		/* bottom right sub */
-		blendcircle(
-			&screen,
-			rect(
-				mainview.dstr.uend,
-				mainview.dstr.vend,
-				mainview.dstr.uend+(Bord+Pad),
-				mainview.dstr.vend+(Bord+Pad)
-			),
-			fgcolor,
-			BlendSub,
-			pt(
-				mainview.dstr.uend<<4,
-				mainview.dstr.vend<<4
-			),
-			(Pad)<<4,
-			4
-		);
-
-
+		mainview.dstr = dragborder(&dragbord, mainview.dstr, bordcolor, Bord, Pad, inp, inep);
 
 		textedit(&mainview, inp, inep);
 	}

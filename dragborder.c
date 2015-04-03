@@ -86,6 +86,13 @@ recomp:
 				db->xy[1] = inp->xy[1];
 				inp->begin &= ~Mouse1;
 			}
+			Rect focus;
+			focus.u0 = dstr.u0 - (bord+pad);
+			focus.v0 = dstr.v0 - (bord+pad);
+			focus.uend = dstr.uend + (bord+pad);
+			focus.vend = dstr.vend + (bord+pad);
+			if(ptinrect(inp->xy, &focus))
+				db->needfocus = 1;
 		}
 		if(db->drag != 0 && mousemove(inp) == Mouse1){
 			short du, dv;

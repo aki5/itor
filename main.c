@@ -22,8 +22,9 @@ enum {
 	Pad = 10
 };
 
-static Textedit mainview;
-static Dragborder dragbord;
+static Textedit *fileviews;
+static Dragborder *filebords;
+static int nfiles;
 
 char *
 tryfont(char *fontname)
@@ -135,9 +136,14 @@ main(int argc, char *argv[])
 #endif
 
 	int ntext = 0, atext = 0;
-	char *text = NULL;
-	if(optind < argc){
+	int i = 0;
+	fileviews = malloc((argc-optind) * sizeof fileviews[0]);
+	memset(fileviews, 0, (argc-optind) * sizeof fileviews[0]);
+	filebords = malloc((argc-optind) * sizeof filebords[0]);
+	memset(filebords, 0, (argc-optind) * sizeof filebords[0]);
+	while(optind < argc){
 		int n;
+		char *text = NULL;
 		fd = open(argv[optind], O_RDWR);
 		ntext = 0;
 		atext = 1024;
@@ -149,29 +155,40 @@ main(int argc, char *argv[])
 				text = realloc(text, atext);
 			}
 		}
+
+		inittextedit(
+			&fileviews[i],
+			&screen,
+			rect(200,200,1000,800),
+			Pad,
+			text,
+			ntext
+		);
+		fileviews[i].fgcolor = fgcolor;
+		fileviews[i].selcolor = selcolor;
+		i++;
+		optind++;
 	}
-
-
-	inittextedit(
-		&mainview,
-		&screen,
-		rect(200,200,1000,800),
-		Pad,
-		text,
-		ntext
-	);
-	mainview.fgcolor = fgcolor;
-	mainview.selcolor = selcolor;
+	nfiles = i;
 
 	for(;;){
-		Rect tmpr;
+		int j;
 		inp = drawevents(&inep);
-
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
-
-		mainview.dstr = dragborder(&dragbord, mainview.dstr, bordcolor, Bord, Pad, inp, inep);
-
-		textedit(&mainview, inp, inep);
+		for(j = 0; j < nfiles; j++)
+			filebords[j].needfocus = 0;
+		for(i = 0; i < nfiles; i++){
+			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, bordcolor, Bord, Pad, inp, inep);
+			if(filebords[i].needfocus){
+				for(j = 0; j < nfiles; j++)
+					filebords[j].hasfocus = 0;
+				filebords[i].hasfocus = 1;
+			}
+			if(filebords[i].hasfocus)
+				textedit(fileviews+i, inp, inep);
+			else
+				textedit(fileviews+i, inep, inep);
+		}
 	}
 
 	return 0;

@@ -1,6 +1,8 @@
 
 typedef struct Dragborder Dragborder;
 struct Dragborder {
+	int hasfocus;
+	int needfocus;
 	int drag;
 	short xy[2];
 };

@@ -1,3 +1,9 @@
 This is the first file that has been fully edited with Itor.
 
 The mighty ed has spoken.
+
+Still writing stuff with itor. Itor now works on linux framebuffer. The keymap business was hell.
+It seems like actually making a touchscreen keyboard emulator would have been easier than supporting
+a zillion different keyboard layouts that all output the same scancodes.
+
+Keyboards are stupid devices. Very stupid devices.

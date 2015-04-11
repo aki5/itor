@@ -27,8 +27,8 @@ struct Textedit {
 	Image *selcolor;
 	Image *fgcolor;
 
-	short marku[2];
-	short markv[2];
+	intcoord marku[2];
+	intcoord markv[2];
 	int mark[2];
 	int nmark;
 
@@ -39,12 +39,12 @@ struct Textedit {
 
 	int drag;
 	int select;
-	short dragu0;
-	short dragv0;
+	intcoord dragu0;
+	intcoord dragv0;
 
-	short seloff[2];
-	short sel0[2];
-	short sel1[2];
+	intcoord seloff[2];
+	intcoord sel0[2];
+	intcoord sel1[2];
 };
 
 void textedit(Textedit *texp, Input *inp, Input *inep);

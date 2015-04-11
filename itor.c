@@ -103,8 +103,8 @@ main(int argc, char *argv[])
 	initdrawstr(fontname); 
 	setfontsize(fontsize);
 
-	//if(drawinit(60*fontem(),800) == -1){
-	if(drawinit(1920, 1080) == -1){
+	if(drawinit(60*fontem(),800) == -1){
+	//if(drawinit(1920, 1080) == -1){
 		fprintf(stderr, "drawinit failed\n");
 		exit(1);	
 	}
@@ -175,19 +175,9 @@ main(int argc, char *argv[])
 		int j;
 		inp = drawevents(&inep);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
-		for(j = 0; j < nfiles; j++)
-			filebords[j].needfocus = 0;
 		for(i = 0; i < nfiles; i++){
 			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, bordcolor, Bord, Pad, inp, inep);
-			if(filebords[i].needfocus){
-				for(j = 0; j < nfiles; j++)
-					filebords[j].hasfocus = 0;
-				filebords[i].hasfocus = 1;
-			}
-			if(filebords[i].hasfocus)
-				textedit(fileviews+i, inp, inep);
-			else
-				textedit(fileviews+i, inep, inep);
+			textedit(fileviews+i, inp, inep);
 		}
 	}
 

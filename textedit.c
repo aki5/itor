@@ -246,13 +246,13 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 				texp->sel1[0] = inp->xy[0]-texp->uoff;
 				texp->sel1[1] = inp->xy[1]-texp->voff;
 			} else if(texp->select == 2){
-				short tmp;
+				intcoord tmp;
 				texp->sel0[0] = inp->xy[0] - texp->uoff - texp->seloff[0];
 				tmp = inp->xy[1] - texp->voff - texp->seloff[1];
 				if(tmp <= texp->sel1[1]+linespace()-1)
 					texp->sel0[1] = tmp;
 			} else if(texp->select == 3){
-				short tmp;
+				intcoord tmp;
 				texp->sel0[0] = inp->xy[0] - texp->uoff - texp->seloff[0];
 				tmp = inp->xy[1] - texp->voff - texp->seloff[1];
 				if(tmp >= texp->sel1[1])
@@ -315,8 +315,8 @@ textedit(Textedit *texp, Input *inp, Input *inep)
 	char *sp;
 	int insel, dx;
 	int code, off;
-	short sel0[2];
-	short sel1[2];
+	intcoord sel0[2];
+	intcoord sel1[2];
 
 	dstr = texp->dstr;
 

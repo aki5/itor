@@ -23,7 +23,7 @@ enum {
 };
 
 static Textedit *fileviews;
-static Dragborder *filebords;
+static Border *filebords;
 static int nfiles;
 
 char *
@@ -156,6 +156,7 @@ main(int argc, char *argv[])
 			}
 		}
 
+		initborder(filebords+i, bordcolor, Bord, Pad);
 		inittextedit(
 			&fileviews[i],
 			&screen,
@@ -166,6 +167,7 @@ main(int argc, char *argv[])
 		);
 		fileviews[i].fgcolor = fgcolor;
 		fileviews[i].selcolor = selcolor;
+
 		i++;
 		optind++;
 	}
@@ -176,7 +178,7 @@ main(int argc, char *argv[])
 		inp = drawevents(&inep);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 		for(i = 0; i < nfiles; i++){
-			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, bordcolor, Bord, Pad, inp, inep, NULL);
+			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, inp, inep, NULL);
 			textedit(fileviews+i, inp, inep);
 		}
 	}

@@ -8,7 +8,7 @@ enum {
 	Pad = 12 
 };
 
-static Dragborder *bords;
+static Border *bords;
 static Rect *rects;
 int nbords;
 
@@ -72,9 +72,9 @@ main(void)
 		for(i = nbords-1; i >= 0; i--){
 			Rect tmpr;
 			int hit;
-			rects[i] = dragborder(bords+i, rects[i], bordcolor, Bord, Pad, inp, inep, &hit);
+			rects[i] = dragborder(bords+i, rects[i], inp, inep, &hit);
 			if(washit == 0 && hit == 1){
-				Dragborder tmpbord;
+				Border tmpbord;
 				tmpr = rects[i];
 				memmove(rects+i, rects+i+1, (nbords-(i+1)) * sizeof rects[0]);
 				rects[nbords-1] = tmpr;
@@ -91,13 +91,13 @@ main(void)
 				if(mousebegin(p) == Mouse1){
 					nbords++;
 					bords = realloc(bords, nbords * sizeof bords[0]);
-					memset(bords+nbords-1, 0, sizeof bords[0]);
+					initborder(bords+nbords-1, bordcolor, Bord, Pad);
 					rects = realloc(rects, nbords * sizeof rects[0]);
 					rects[nbords-1] = rect(p->xy[0], p->xy[1], p->xy[0], p->xy[1]);
 					rects[nbords-1] = dragborder(
 						bords+nbords-1,
 						rects[nbords-1],
-						bordcolor, Bord, Pad, inp, inep,
+						inp, inep,
 						NULL
 					);
 				}
@@ -113,7 +113,7 @@ main(void)
 			tmpr.vend += Pad;
 			drawrect(&screen, tmpr, color(100, 120, 80, 255));
 			drawrect(&screen, rects[i], color(100, 150, 80, 255));
-			drawborder(bords+i, rects[i], bordcolor, Bord, Pad);
+			drawborder(bords+i, rects[i]);
 		}
 	}
 

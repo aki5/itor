@@ -4,6 +4,43 @@
 #include "dragborder.h"
 
 void
+initborder(Border *db, Image *color, int bord, int pad)
+{
+	memset(db, 0, sizeof db[0]);
+
+	db->color = color;
+	db->bord = bord;
+	db->pad = pad;
+
+	db->corn = allocimage(rect(0,0,2*(db->bord+db->pad),2*(db->bord+db->pad)), color(0,0,0,0));
+	blendcircle(
+		db->corn,
+		db->corn->r,
+		db->color,
+		BlendOver,
+		pt((db->bord+db->pad)<<4,(db->bord+db->pad)<<4),
+		(db->bord+db->pad)<<4,
+		4
+	);
+	blendcircle(
+		db->corn,
+		db->corn->r,
+		db->color,
+		BlendSub,
+		pt((db->bord+pad)<<4,(db->bord+pad)<<4),
+		(db->pad)<<4,
+		4
+	);
+}
+
+void
+freeborder(Border *db)
+{
+	if(db->corn != NULL)
+		freeimage(db->corn);
+}
+
+void
 dragbordrects(Rect dstr, int bord, int pad, Rect *topr, Rect *leftr, Rect *bottr, Rect *rightr, Rect *topleft, Rect *bottleft, Rect *bottright, Rect *topright)
 {
 	*topr = rect(
@@ -64,13 +101,13 @@ dragbordrects(Rect dstr, int bord, int pad, Rect *topr, Rect *leftr, Rect *bottr
 }
 
 Rect
-dragborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad, Input *inp, Input *inep, int *hitp)
+dragborder(Border *db, Rect dstr, Input *inp, Input *inep, int *hitp)
 {
 	Rect topr, leftr, bottr, rightr;
 	Rect topleft, bottleft, bottright, topright;
 	int didadj;
 
-	dragbordrects(dstr, bord, pad, 
+	dragbordrects(dstr, db->bord, db->pad, 
 		&topr, &leftr, &bottr, &rightr,
 		&topleft, &bottleft, &bottright, &topright
 	);
@@ -131,158 +168,52 @@ dragborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad, Input *in
 }
 
 void
-drawborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad)
+drawborder(Border *db, Rect dstr)
 {
 	Rect topr, leftr, bottr, rightr;
 	Rect topleft, bottleft, bottright, topright;
 
-	dragbordrects(dstr, bord, pad, 
+	dragbordrects(dstr, db->bord, db->pad, 
 		&topr, &leftr, &bottr, &rightr,
 		&topleft, &bottleft, &bottright, &topright
 	);
 
-	blend2(&screen, topr, color, pt(0,0), BlendOver);
-	blend2(&screen, leftr, color, pt(0,0), BlendOver);
-	blend2(&screen, rightr, color, pt(0,0), BlendOver);
-	blend2(&screen, bottr, color, pt(0,0), BlendOver);
+	blend2(&screen, topr, db->color, pt(0,0), BlendOver);
+	blend2(&screen, leftr, db->color, pt(0,0), BlendOver);
+	blend2(&screen, rightr, db->color, pt(0,0), BlendOver);
+	blend2(&screen, bottr, db->color, pt(0,0), BlendOver);
 
-	/* top left add */
-	blendcircle(
-		&screen,
-		topleft,
-		color,
-		BlendOver,
-		pt(
-			(dstr.u0-1)<<4,
-			(dstr.v0-1)<<4
-		),
-		(bord+pad)<<4,
-		4
-	);
-	/* top left sub */
-	blendcircle(
-		&screen,
-		topleft,
-		color,
-		BlendSub,
-		pt(
-			(dstr.u0-1)<<4,
-			(dstr.v0-1)<<4
-		),
-		(pad)<<4,
-		4
-	);
-
-	/* bottom left add */
-	blendcircle(
-		&screen,
-		bottleft,
-		color,
-		BlendOver,
-		pt(
-			(dstr.u0-1)<<4,
-			dstr.vend<<4
-		),
-		(bord+pad)<<4,
-		4
-	);
-
-	/* bottom left sub */
-	blendcircle(
-		&screen,
-		bottleft,
-		color,
-		BlendSub,
-		pt(
-			(dstr.u0-1)<<4,
-			dstr.vend<<4
-		),
-		(pad)<<4,
-		4
-	);
-
-	/* bottom right add */
-	blendcircle(
-		&screen,
-		bottright,
-		color,
-		BlendOver,
-		pt(
-			dstr.uend<<4,
-			dstr.vend<<4
-		),
-		(bord+pad)<<4,
-		4
-	);
-
-	/* bottom right sub */
-	blendcircle(
-		&screen,
-		bottright,
-		color,
-		BlendSub,
-		pt(
-			dstr.uend<<4,
-			dstr.vend<<4
-		),
-		(pad)<<4,
-		4
-	);
-
-	/* top right add */
-	blendcircle(
-		&screen,
-		topright,
-		color,
-		BlendOver,
-		pt(
-			dstr.uend<<4,
-			(dstr.v0-1)<<4
-		),
-		(bord+pad)<<4,
-		4
-	);
-
-	/* top right sub */
-	blendcircle(
-		&screen,
-		topright,
-		color,
-		BlendSub,
-		pt(
-			dstr.uend<<4,
-			(dstr.v0-1)<<4
-		),
-		(pad)<<4,
-		4
-	);
+	blend2(&screen, topleft, db->corn, pt(topleft.u0,topleft.v0), BlendOver);
+	blend2(&screen, bottleft, db->corn, pt(bottleft.u0,bottleft.v0+db->bord+db->pad), BlendOver);
+	blend2(&screen, bottright, db->corn, pt(bottright.u0+db->bord+db->pad,bottright.v0+db->bord+db->pad), BlendOver);
+	blend2(&screen, topright, db->corn, pt(topright.u0+db->bord+db->pad,topright.v0), BlendOver);
 
 	/* close button */
-	Rect closeb = rect(topr.u0, topr.v0, topr.u0+bord+pad, topr.vend);
+	Rect closeb = rect(topr.u0, topr.v0, topr.u0+db->bord+db->pad, topr.vend);
 
 	blendcircle(
 		&screen,
 		screen.r,
-		color,
+		db->color,
 		BlendOver,
 		pt(
 			(closeb.u0+closeb.uend)<<3,
 			(closeb.v0+closeb.vend)<<3
 		),
-		(bord+pad)<<3,
+		(db->bord+db->pad)<<3,
 		4
 	);
 
 	blendcircle(
 		&screen,
 		screen.r,
-		color,
+		db->color,
 		BlendSub,
 		pt(
 			(closeb.u0+closeb.uend)<<3,
 			(closeb.v0+closeb.vend)<<3
 		),
-		(bord+pad-4)<<3,
+		(db->bord+db->pad-4)<<3,
 		4
 	);
 }

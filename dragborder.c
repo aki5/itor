@@ -3,69 +3,76 @@
 #include "draw3.h"
 #include "dragborder.h"
 
-Rect
-dragborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad, Input *inp, Input *inep)
+void
+dragbordrects(Rect dstr, int bord, int pad, Rect *topr, Rect *leftr, Rect *bottr, Rect *rightr, Rect *topleft, Rect *bottleft, Rect *bottright, Rect *topright)
 {
-
-	Rect topr, leftr, bottr, rightr;
-	Rect topleft, bottleft, bottright, topright;
-	int didadj;
-
-recomp:
-	topr = rect(
+	*topr = rect(
 		dstr.u0,
 		dstr.v0-(bord+pad),
 		dstr.uend,
 		dstr.v0-pad
 	);
 
-	leftr = rect(
+	*leftr = rect(
 		dstr.u0-(bord+pad),
 		dstr.v0,
 		dstr.u0-(pad),
 		dstr.vend
 	);
 
-	rightr = rect(
+	*rightr = rect(
 		dstr.uend+pad,
 		dstr.v0,
 		dstr.uend+(bord+pad),
 		dstr.vend
 	);
 
-	bottr = rect(
+	*bottr = rect(
 		dstr.u0,
 		dstr.vend+pad,
 		dstr.uend,
 		dstr.vend+(bord+pad)
 	);
 
-	topleft = rect(
+	*topleft = rect(
 		dstr.u0-(bord+pad)-1,
 		dstr.v0-(bord+pad)-1,
 		dstr.u0,
 		dstr.v0
 	);
 
-	bottleft = rect(
+	*bottleft = rect(
 		dstr.u0-(bord+pad)-1,
 		dstr.vend,
 		dstr.u0,
 		dstr.vend+(bord+pad)
 	);
 
-	topright = rect(
+	*topright = rect(
 		dstr.uend,
 		dstr.v0-(bord+pad)-1,
 		dstr.uend+(bord+pad),
 		dstr.v0
 	);
 
-	bottright = rect(
+	*bottright = rect(
 		dstr.uend,
 		dstr.vend,
 		dstr.uend+(bord+pad),
 		dstr.vend+(bord+pad)
+	);
+}
+
+Rect
+dragborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad, Input *inp, Input *inep, int *hitp)
+{
+	Rect topr, leftr, bottr, rightr;
+	Rect topleft, bottleft, bottright, topright;
+	int didadj;
+
+	dragbordrects(dstr, bord, pad, 
+		&topr, &leftr, &bottr, &rightr,
+		&topleft, &bottleft, &bottright, &topright
 	);
 
 	didadj = 0;
@@ -116,8 +123,23 @@ recomp:
 		if(db->drag != 0 && mouseend(inp) == Mouse1)
 			db->drag = 0;
 	}
-	if(didadj)
-		goto recomp;
+
+	if(hitp != NULL)
+		*hitp = didadj;
+
+	return dstr;
+}
+
+void
+drawborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad)
+{
+	Rect topr, leftr, bottr, rightr;
+	Rect topleft, bottleft, bottright, topright;
+
+	dragbordrects(dstr, bord, pad, 
+		&topr, &leftr, &bottr, &rightr,
+		&topleft, &bottleft, &bottright, &topright
+	);
 
 	blend2(&screen, topr, color, pt(0,0), BlendOver);
 	blend2(&screen, leftr, color, pt(0,0), BlendOver);
@@ -235,5 +257,32 @@ recomp:
 		4
 	);
 
-	return dstr;
+	/* close button */
+	Rect closeb = rect(topr.u0, topr.v0, topr.u0+bord+pad, topr.vend);
+
+	blendcircle(
+		&screen,
+		screen.r,
+		color,
+		BlendOver,
+		pt(
+			(closeb.u0+closeb.uend)<<3,
+			(closeb.v0+closeb.vend)<<3
+		),
+		(bord+pad)<<3,
+		4
+	);
+
+	blendcircle(
+		&screen,
+		screen.r,
+		color,
+		BlendSub,
+		pt(
+			(closeb.u0+closeb.uend)<<3,
+			(closeb.v0+closeb.vend)<<3
+		),
+		(bord+pad-4)<<3,
+		4
+	);
 }

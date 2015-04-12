@@ -176,7 +176,7 @@ main(int argc, char *argv[])
 		inp = drawevents(&inep);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 		for(i = 0; i < nfiles; i++){
-			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, bordcolor, Bord, Pad, inp, inep);
+			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, bordcolor, Bord, Pad, inp, inep, NULL);
 			textedit(fileviews+i, inp, inep);
 		}
 	}

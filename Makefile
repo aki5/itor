@@ -12,7 +12,7 @@ ifeq ($(shell uname -s), Linux)
 	TARGETS+=winman-linuxfb
 endif
 
-CFLAGS=-g -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
+CFLAGS=-O3 -fomit-frame-pointer -I/opt/local/include -I/usr/X11R7/include -I$(ROOT)/libdraw3 -W -Wall
 #CFLAGS=-g -I/opt/local/include -I$(ROOT)/libdraw3 -W -Wall
 
 OFILES=\

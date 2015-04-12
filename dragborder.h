@@ -5,4 +5,5 @@ struct Dragborder {
 	intcoord xy[2];
 };
 
-Rect dragborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad, Input *inp, Input *inep);
+Rect dragborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad, Input *inp, Input *inep, int *hitp);
+void drawborder(Dragborder *db, Rect dstr, Image *color, int bord, int pad);

@@ -168,7 +168,7 @@ dragborder(Border *db, Rect dstr, Input *inp, Input *inep, int *hitp)
 }
 
 void
-drawborder(Border *db, Rect dstr)
+drawborder(Border *db, Rect dstr, int op)
 {
 	Rect topr, leftr, bottr, rightr;
 	Rect topleft, bottleft, bottright, topright;
@@ -178,17 +178,17 @@ drawborder(Border *db, Rect dstr)
 		&topleft, &bottleft, &bottright, &topright
 	);
 
-	blend2(&screen, topr, db->color, pt(0,0), BlendOver);
-	blend2(&screen, leftr, db->color, pt(0,0), BlendOver);
-	blend2(&screen, rightr, db->color, pt(0,0), BlendOver);
-	blend2(&screen, bottr, db->color, pt(0,0), BlendOver);
+	blend2(&screen, topr, db->color, pt(0,0), op);
+	blend2(&screen, leftr, db->color, pt(0,0), op);
+	blend2(&screen, rightr, db->color, pt(0,0), op);
+	blend2(&screen, bottr, db->color, pt(0,0), op);
 
-	blend2(&screen, topleft, db->corn, pt(topleft.u0,topleft.v0), BlendOver);
-	blend2(&screen, bottleft, db->corn, pt(bottleft.u0,bottleft.v0+db->bord+db->pad), BlendOver);
-	blend2(&screen, bottright, db->corn, pt(bottright.u0+db->bord+db->pad,bottright.v0+db->bord+db->pad), BlendOver);
-	blend2(&screen, topright, db->corn, pt(topright.u0+db->bord+db->pad,topright.v0), BlendOver);
+	blend2(&screen, topleft, db->corn, pt(topleft.u0,topleft.v0), op);
+	blend2(&screen, bottleft, db->corn, pt(bottleft.u0,bottleft.v0+db->bord+db->pad), op);
+	blend2(&screen, bottright, db->corn, pt(bottright.u0+db->bord+db->pad,bottright.v0+db->bord+db->pad), op);
+	blend2(&screen, topright, db->corn, pt(topright.u0+db->bord+db->pad,topright.v0), op);
 
-	/* close button */
+/* close button 
 	Rect closeb = rect(topr.u0, topr.v0, topr.u0+db->bord+db->pad, topr.vend);
 
 	blendcircle(
@@ -216,4 +216,5 @@ drawborder(Border *db, Rect dstr)
 		(db->bord+db->pad-4)<<3,
 		4
 	);
+*/
 }

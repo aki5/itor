@@ -18,8 +18,8 @@
 #include "dragborder.h"
 
 enum {
-	Bord = 10,
-	Pad = 10
+	Bord = 12,
+	Pad = 12
 };
 
 static Textedit *fileviews;
@@ -174,12 +174,12 @@ main(int argc, char *argv[])
 	nfiles = i;
 
 	for(;;){
-		int j;
 		inp = drawevents(&inep);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 		for(i = 0; i < nfiles; i++){
 			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, inp, inep, NULL);
 			textedit(fileviews+i, inp, inep);
+			drawborder(filebords+i, fileviews[i].dstr, BlendOver);
 		}
 	}
 

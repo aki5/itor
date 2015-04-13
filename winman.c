@@ -107,6 +107,9 @@ main(void)
 				blend2(&screen, tmpr, colors[i], pt(0,0), BlendUnder);
 			}
 		}
+		for(p = inp; p < inep; p++)
+			if((p->on & KeyControl) != 0 && keystr(p, "q"))
+				exit(0);
 	
 		if(!washit){
 			for(p = inp; p < inep; p++){

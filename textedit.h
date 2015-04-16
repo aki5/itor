@@ -47,5 +47,5 @@ struct Textedit {
 	intcoord sel1[2];
 };
 
-void textedit(Textedit *texp, Input *inp, Input *inep);
+void textedit(Textedit *texp, Input *inp, int ninp);
 void inittextedit(Textedit *texp, Image *dst, Rect dstr, int pad, char *text, int ntext);

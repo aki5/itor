@@ -40,8 +40,9 @@ tryfont(char *fontname)
 int
 main(int argc, char *argv[])
 {
-	Input *inp, *inep;
+	Input *inp;
 	char *fontname = NULL;
+	int ninp;
 	int fontsize;
 	int opt, fgci;
 	int fd;
@@ -174,12 +175,11 @@ main(int argc, char *argv[])
 	nfiles = i;
 
 	for(;;){
-		inp = drawevents(&inep);
+		inp = drawevents(&ninp);
 		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 		for(i = 0; i < nfiles; i++){
-			fileviews[i].dstr = dragborder(filebords+i, fileviews[i].dstr, inp, inep, NULL);
-			textedit(fileviews+i, inp, inep);
-			drawborder(filebords+i, fileviews[i].dstr, BlendOver);
+			textedit(fileviews+i, inp, ninp);
+			dragborder(filebords+i, &fileviews[i].dstr, inp, ninp);
 		}
 	}
 

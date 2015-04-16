@@ -4,8 +4,8 @@
 #include "dragborder.h"
 
 enum {
-	Bord = 6,
-	Pad = 6 
+	Bord = 12,
+	Pad = 12 
 };
 
 static Border *bords;
@@ -27,8 +27,9 @@ tryfont(char *fontname)
 int
 main(void)
 {
-	Input *inp, *inep;
+	Input *inp;
 	char *fontname = NULL;
+	int ninp;
 	int fontsize;
 	int i;
 
@@ -65,15 +66,13 @@ main(void)
 
 	for(;;){
 		Input *p;
-		inp = drawevents(&inep);
-		drawrect(&screen, screen.r, color(0, 0, 0, 0));
-
+		inp = drawevents(&ninp);
 		int washit = 0;
+restart:
+		drawrect(&screen, screen.r, color(0, 0, 0, 0));
 		for(i = nbords-1; i >= 0; i--){
 			Rect tmpr;
 			int hit;
-
-			rects[i] = dragborder(bords+i, rects[i], inp, inep, &hit);
 
 			tmpr = rects[i];
 			tmpr.u0 -= Pad;
@@ -81,12 +80,18 @@ main(void)
 			tmpr.uend += Pad;
 			tmpr.vend += Pad;
 
-			if(washit == 0 && hit == 1){
+			hit = dragborder(bords+i, rects+i, inp, ninp);
+			blend2(&screen, tmpr, colors[i], pt(0,0), BlendUnder);
+
+			if(washit == 0 && (hit&2) != 0){
+				memmove(rects+i, rects+i+1, (nbords-(i+1)) * sizeof rects[0]);
+				memmove(bords+i, bords+i+1, (nbords-(i+1)) * sizeof bords[0]);
+				memmove(colors+i, colors+i+1, (nbords-(i+1)) * sizeof colors[0]);
+				nbords--;
+				goto restart;
+			} else if(washit == 0 && (hit&1) != 0){
 				Border tmpbord;
 				Image *tmpcolor;
-
-				blend2(&screen, tmpr, colors[i], pt(0,0), BlendOver);
-				drawborder(bords+i, rects[i], BlendOver);
 
 				tmpr = rects[i];
 				memmove(rects+i, rects+i+1, (nbords-(i+1)) * sizeof rects[0]);
@@ -100,19 +105,22 @@ main(void)
 				memmove(colors+i, colors+i+1, (nbords-(i+1)) * sizeof colors[0]);
 				colors[nbords-1] = tmpcolor;
 
-				washit = 1;
+				if(washit == 0){
+					washit = 1;
+					goto restart;
+				}
 
-			} else {
-				drawborder(bords+i, rects[i], BlendUnder);
-				blend2(&screen, tmpr, colors[i], pt(0,0), BlendUnder);
 			}
 		}
-		for(p = inp; p < inep; p++)
+		for(i = 0; i < ninp; i++){
+			p = inp + i;
 			if((p->on & KeyControl) != 0 && keystr(p, "q"))
 				exit(0);
+		}
 	
 		if(!washit){
-			for(p = inp; p < inep; p++){
+			for(i = 0; i < ninp; i++){
+				p = inp + i;
 				if(mousebegin(p) == Mouse1){
 					uchar cval[4];
 					nbords++;
@@ -123,11 +131,10 @@ main(void)
 
 					initborder(bords+nbords-1, bordcolor, Bord, Pad);
 					rects[nbords-1] = rect(p->xy[0]+Bord+Pad, p->xy[1]+Bord+Pad, p->xy[0]+Bord+Pad, p->xy[1]+Bord+Pad);
-					rects[nbords-1] = dragborder(
+					dragborder(
 						bords+nbords-1,
-						rects[nbords-1],
-						inp, inep,
-						NULL
+						rects+nbords-1,
+						inp, ninp
 					);
 					idx2color(nbords-1, cval);
 					cval[3] = 224;
@@ -137,6 +144,8 @@ main(void)
 					colors[nbords-1] = allocimage(rect(0,0,1,1), cval);
 
 					bords[nbords-1].drag = 4;
+					bords[nbords-1].xy[0] += (Bord+Pad)+Pad;
+					bords[nbords-1].xy[1] += (Bord+Pad)+Pad;
 
 					Rect tmpr;
 					tmpr = rects[nbords-1];
@@ -144,8 +153,6 @@ main(void)
 					tmpr.v0 -= Pad;
 					tmpr.uend += Pad;
 					tmpr.vend += Pad;
-					blend2(&screen, tmpr, colors[nbords-1], pt(0,0), BlendOver);
-					drawborder(bords+nbords-1, rects[nbords-1], BlendOver);
 
 				}
 			}

@@ -19,13 +19,13 @@ dragbordrects(
 	Rect *topr, Rect *leftr, Rect *bottr, Rect *rightr,
 	Rect *topleft, Rect *bottleft, Rect *bottright, Rect *topright
 ) {
-	closer->u0 = dstr.u0;
-	closer->v0 = dstr.v0 - (bord+pad) - (pad/2);
-	closer->uend = dstr.u0 + bord+pad;
+	closer->u0 = dstr.u0 - (bord+pad);
+	closer->v0 = dstr.v0 - (bord+pad);
+	closer->uend = dstr.u0;
 	closer->vend = closer->v0 + bord+pad;
 
 	*topr = rect(
-		closer->uend,
+		dstr.u0, //closer->uend,
 		dstr.v0-(bord+pad),
 		dstr.uend,
 		dstr.v0-pad
@@ -107,7 +107,7 @@ dragborder(Border *db, Rect *dstr, Input *inp, int ninp)
 	blend2(&screen, bottright, db->corn, pt(bottright.u0+db->bord+db->pad,bottright.v0+db->bord+db->pad), op);
 	blend2(&screen, topright, db->corn, pt(topright.u0+db->bord+db->pad,topright.v0), op);
 
-	blend2(&screen, closer, db->closei, pt(closer.u0,closer.v0), op);
+	//blend2(&screen, closer, db->closei, pt(closer.u0,closer.v0), op);
 
 	didadj = 0;
 	for(i = 0; i < ninp; i++){
@@ -199,6 +199,7 @@ initborder(Border *db, Image *color, int bord, int pad)
 		db->corn,
 		db->corn->r,
 		db->color,
+		pt(0,0),
 		BlendOver,
 		pt((db->bord+db->pad)<<4,(db->bord+db->pad)<<4),
 		(db->bord+db->pad)<<4,
@@ -209,18 +210,75 @@ initborder(Border *db, Image *color, int bord, int pad)
 		db->corn,
 		db->corn->r,
 		db->color,
+		pt(0,0),
 		BlendSub,
 		pt((db->bord+pad)<<4,(db->bord+pad)<<4),
 		(db->pad)<<4,
 		4
 	);
 
-	Image *closei;
 	Image *red;
 
 	red = allocimage(rect(0,0,1,1), color(255,70,70,255));
+
+	blendcircle(
+		db->corn,
+		db->corn->r,
+		db->color,
+		pt(0,0),
+		BlendOver,
+		pt(
+			(db->corn->r.u0+db->corn->r.uend)<<2,
+			(db->corn->r.v0+db->corn->r.vend)<<2
+		),
+		(db->bord+db->pad)<<3,
+		4
+	);
+
+	blendcircle(
+		db->corn,
+		db->corn->r,
+		red,
+		pt(0,0),
+		BlendOver,
+		pt(
+			(db->corn->r.u0+db->corn->r.uend)<<2,
+			(db->corn->r.v0+db->corn->r.vend)<<2
+		),
+		(db->bord+db->pad/2)<<3,
+		4
+	);
+
+#if 0
+	Image *closei;
 	closei = allocimage(rect(0,0,bord+pad,bord+pad), color(0,0,0,0));
 
+	blendcircle(
+		closei,
+		closei->r,
+		db->color,
+		pt(0,0),
+		BlendOver,
+		pt((db->bord+db->pad)<<4,(db->bord+db->pad)<<4),
+		(db->bord+db->pad)<<4,
+		4
+	);
+	blendcircle(
+		closei,
+		closei->r,
+		db->color,
+		pt(0,0),
+		BlendSub,
+		pt((db->bord+pad)<<4,(db->bord+pad)<<4),
+		(db->pad)<<4,
+		4
+	);
+
+/*
+
+*/
+
+/*
 	blend2(closei,
 		rect(
 			closei->r.u0,
@@ -232,11 +290,12 @@ initborder(Border *db, Image *color, int bord, int pad)
 		pt(0,0),
 		BlendOver
 	);
-
+*/
 	blendcircle(
 		closei,
 		closei->r,
 		db->color,
+		pt(0,0),
 		BlendOver,
 		pt(
 			(closei->r.u0+closei->r.uend)<<3,
@@ -250,6 +309,7 @@ initborder(Border *db, Image *color, int bord, int pad)
 		closei,
 		closei->r,
 		red,
+		pt(0,0),
 		BlendOver,
 		pt(
 			(closei->r.u0+closei->r.uend)<<3,
@@ -258,7 +318,9 @@ initborder(Border *db, Image *color, int bord, int pad)
 		(db->bord+db->pad/2)<<3,
 		4
 	);
-	freeimage(red);
 	db->closei = closei;
+
+#endif
+	freeimage(red);
 }
 
